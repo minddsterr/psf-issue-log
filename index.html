@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PSF Issue Log</title>
+<style>
+  :root{
+    --sidebar-w: 260px;
+    --blue: #0079bf;
+    --blue-dark: #026aa7;
+    --bg: #f4f5f7;
+    --card-bg: #ffffff;
+    --text: #172b4d;
+    --text-light: #5e6c84;
+    --border: #dfe1e6;
+    --new: #eb5a46;
+    --doing: #ff9f1a;
+    --done: #61bd4f;
+    --shadow: 0 1px 2px rgba(9,30,66,.25);
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family: "Segoe UI","Sarabun",-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;
+    color:var(--text);
+    background:var(--bg);
+    display:flex;
+    height:100vh;
+    overflow:hidden;
+  }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{
+    width:var(--sidebar-w);
+    min-width:var(--sidebar-w);
+    background:#fff;
+    border-right:1px solid var(--border);
+    display:flex;
+    flex-direction:column;
+    overflow-y:auto;
+  }
+  .sidebar-header{
+    padding:18px 20px 10px;
+    font-weight:700;
+    font-size:15px;
+    color:var(--text);
+    letter-spacing:.2px;
+  }
+  .menu-list{list-style:none;margin:0;padding:6px 8px 20px;}
+  .menu-item{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:11px 12px;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:14.5px;
+    color:#333;
+    user-select:none;
+    transition:background .12s;
+  }
+  .menu-item:hover{background:#f4f5f7;}
+  .menu-item.active{background:#e4ecf7;color:var(--blue-dark);font-weight:600;}
+  .menu-item .mi-icon{font-size:17px;width:22px;text-align:center;flex-shrink:0;}
+  .menu-item .mi-label{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .menu-item .mi-new{
+    font-size:11.5px;font-weight:700;color:#fff;background:var(--new);
+    min-width:20px;height:20px;border-radius:50%;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;padding:0 5px;
+  }
+  .menu-item .mi-chev{font-size:11px;color:#8993a4;transform:rotate(180deg);flex-shrink:0;}
+
+  /* ---------- Main board area ---------- */
+  .board-area{flex:1;display:flex;flex-direction:column;min-width:0;}
+  .board-header{
+    padding:16px 24px;
+    background:#fff;
+    border-bottom:1px solid var(--border);
+    display:flex;
+    align-items:center;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+  .board-header h1{
+    font-size:19px;margin:0;display:flex;align-items:center;gap:10px;flex:1;min-width:200px;
+  }
+  .board-header h1 .bh-icon{font-size:22px;}
+  .search-box{
+    display:flex;align-items:center;gap:6px;background:var(--bg);
+    border:1px solid var(--border);border-radius:8px;padding:7px 12px;min-width:220px;
+  }
+  .search-box input{border:none;background:transparent;outline:none;font-size:14px;flex:1;color:var(--text);}
+  .btn{
+    border:none;border-radius:6px;padding:9px 16px;font-size:14px;font-weight:600;
+    cursor:pointer;transition:background .12s,opacity .12s;
+  }
+  .btn-primary{background:var(--blue);color:#fff;}
+  .btn-primary:hover{background:var(--blue-dark);}
+  .btn-secondary{background:#e4e6ea;color:#333;}
+  .btn-secondary:hover{background:#d7dadf;}
+  .btn-danger{background:#fff;color:#c9372c;border:1px solid #c9372c33;}
+  .btn-danger:hover{background:#fdecea;}
+  .btn-ghost{background:transparent;color:var(--text-light);}
+  .btn-ghost:hover{background:#f4f5f7;}
+
+  .columns-wrap{
+    flex:1;display:flex;gap:16px;padding:18px 24px;overflow-x:auto;overflow-y:hidden;align-items:flex-start;
+  }
+  .column{
+    background:#ebecf0;border-radius:10px;flex:1 1 0;min-width:260px;
+    display:flex;flex-direction:column;max-height:100%;
+  }
+  .column-head{
+    padding:12px 12px 8px;display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;
+  }
+  .col-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .column-head .count{color:var(--text-light);font-weight:600;font-size:12.5px;}
+  .card-list{
+    flex:1;overflow-y:auto;padding:2px 10px;display:flex;flex-direction:column;gap:8px;min-height:40px;
+  }
+  .card-list.drag-over{background:#dce3ea;border-radius:8px;}
+  .issue-card{
+    background:var(--card-bg);border-radius:8px;box-shadow:var(--shadow);
+    padding:10px 10px 9px;cursor:pointer;position:relative;
+  }
+  .issue-card:hover{background:#f9fafc;}
+  .issue-card.dragging{opacity:.35;}
+  .issue-card .cover{
+    width:calc(100% + 20px);margin:-10px -10px 8px;border-radius:8px 8px 0 0;
+    max-height:120px;object-fit:cover;display:block;
+  }
+  .issue-card .status-stripe{
+    position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:8px 0 0 8px;
+  }
+  .issue-card .title{font-size:14px;line-height:1.4;margin-bottom:6px;word-break:break-word;}
+  .issue-card .meta-row{display:flex;gap:10px;align-items:center;color:var(--text-light);font-size:12px;flex-wrap:wrap;}
+  .issue-card .meta-row span{display:flex;align-items:center;gap:3px;}
+  .add-card-trigger{
+    margin:2px 8px 12px;padding:9px 10px;border-radius:8px;color:var(--text-light);
+    font-size:14px;cursor:pointer;display:flex;align-items:center;gap:6px;
+  }
+  .add-card-trigger:hover{background:#dce3ea;color:var(--text);}
+  .quick-add{margin:2px 8px 10px;display:flex;flex-direction:column;gap:8px;}
+  .quick-add textarea{
+    border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:14px;resize:none;
+    font-family:inherit;box-shadow:var(--shadow);outline:none;
+  }
+  .quick-add .qa-actions{display:flex;gap:8px;align-items:center;}
+
+  /* ---------- Modal ---------- */
+  .overlay{
+    position:fixed;inset:0;background:rgba(9,30,66,.54);display:none;
+    align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;z-index:100;
+  }
+  .overlay.open{display:flex;}
+  .modal{
+    background:#fff;border-radius:10px;width:100%;max-width:680px;
+    box-shadow:0 8px 30px rgba(9,30,66,.35);overflow:hidden;
+  }
+  .modal-cover{width:100%;max-height:220px;object-fit:cover;display:block;background:#dfe1e6;}
+  .modal-body{padding:20px 24px 26px;}
+  .modal-top{display:flex;justify-content:flex-end;}
+  .modal-close{
+    border:none;background:transparent;font-size:20px;cursor:pointer;color:var(--text-light);
+    padding:4px 8px;border-radius:4px;
+  }
+  .modal-close:hover{background:#f4f5f7;}
+  .modal-title-input{
+    width:100%;font-size:20px;font-weight:700;border:none;outline:none;padding:6px 8px;
+    border-radius:6px;margin:2px 0 14px;font-family:inherit;
+  }
+  .modal-title-input:hover, .modal-title-input:focus{background:#f4f5f7;}
+  .field-row{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:18px;}
+  .field{flex:1;min-width:180px;}
+  .field label{
+    display:block;font-size:12px;font-weight:700;color:var(--text-light);
+    text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;
+  }
+  .field select, .field input[type=text]{
+    width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;
+    font-size:14px;font-family:inherit;outline:none;background:#fff;
+  }
+  .field select:focus, .field input:focus{border-color:var(--blue);}
+  .status-select{font-weight:600;}
+  .meta-line{font-size:12.5px;color:var(--text-light);margin-bottom:16px;}
+  .section{margin-bottom:20px;}
+  .section > label{
+    display:block;font-size:12px;font-weight:700;color:var(--text-light);
+    text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;
+  }
+  .section textarea{
+    width:100%;min-height:90px;border:1px solid var(--border);border-radius:6px;
+    padding:10px 12px;font-size:14px;font-family:inherit;outline:none;resize:vertical;
+  }
+  .section textarea:focus{border-color:var(--blue);}
+  .attach-grid{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;}
+  .attach-tile{
+    width:110px;border:1px solid var(--border);border-radius:8px;overflow:hidden;
+    position:relative;background:#fafbfc;text-decoration:none;color:inherit;display:block;
+  }
+  .attach-tile img{width:100%;height:74px;object-fit:cover;display:block;background:#eee;}
+  .attach-tile .file-icon{
+    height:74px;display:flex;align-items:center;justify-content:center;font-size:28px;background:#eef1f4;
+  }
+  .attach-tile .fname{
+    font-size:11px;padding:5px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .attach-tile .fsize{font-size:10px;color:var(--text-light);padding:0 6px 5px;}
+  .attach-remove{
+    position:absolute;top:3px;right:3px;background:rgba(0,0,0,.55);color:#fff;border:none;
+    width:20px;height:20px;border-radius:50%;cursor:pointer;font-size:12px;line-height:1;
+  }
+  .attach-remove:hover{background:rgba(0,0,0,.8);}
+  .modal-footer{display:flex;justify-content:space-between;align-items:center;margin-top:6px;}
+
+  .empty-state{
+    padding:60px 20px;text-align:center;color:var(--text-light);font-size:14px;width:100%;
+  }
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-thumb{background:#c1c7d0;border-radius:4px;}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-header">เมนูหลัก</div>
+  <ul class="menu-list" id="menuList"></ul>
+</aside>
+
+<main class="board-area">
+  <div class="board-header">
+    <h1><span class="bh-icon" id="bhIcon"></span><span id="bhTitle"></span></h1>
+    <div class="search-box">
+      <span>🔎</span>
+      <input type="text" id="searchInput" placeholder="ค้นหาการ์ดในเมนูนี้...">
+    </div>
+  </div>
+  <div class="columns-wrap" id="columnsWrap"></div>
+</main>
+
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal">
+    <img class="modal-cover" id="modalCover" style="display:none;">
+    <div class="modal-body">
+      <div class="modal-top">
+        <button class="modal-close" id="modalClose">✕</button>
+      </div>
+      <input type="text" class="modal-title-input" id="fieldTitle" placeholder="ชื่อปัญหา...">
+      <div class="field-row">
+        <div class="field">
+          <label>เมนู/ระบบ</label>
+          <select id="fieldDept"></select>
+        </div>
+        <div class="field">
+          <label>สถานะ</label>
+          <select id="fieldStatus" class="status-select"></select>
+        </div>
+        <div class="field">
+          <label>ผู้แจ้งปัญหา</label>
+          <input type="text" id="fieldReporter" placeholder="ชื่อผู้แจ้ง">
+        </div>
+      </div>
+      <div class="meta-line" id="metaLine"></div>
+
+      <div class="section">
+        <label>รายละเอียดปัญหา</label>
+        <textarea id="fieldDesc" placeholder="อธิบายรายละเอียดปัญหาที่พบ..."></textarea>
+      </div>
+
+      <div class="section">
+        <label>รูปภาพ &amp; ไฟล์แนบ</label>
+        <div class="attach-grid" id="attachGrid"></div>
+        <input type="file" id="fileInput" multiple style="display:none;">
+        <button class="btn btn-secondary" id="addAttachBtn">📎 แนบรูปภาพ/ไฟล์</button>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-danger" id="deleteCardBtn">ลบการ์ดนี้</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------------- Config ----------------
+  const DEPARTMENTS = [
+    {key:"users",    label:"จัดการผู้ใช้งาน",        icon:"👤"},
+    {key:"basedata", label:"ระบบข้อมูลพื้นฐาน",       icon:"📄"},
+    {key:"admin",    label:"ระบบงานบริหาร",          icon:"🗂️"},
+    {key:"audit",    label:"ระบบงานตรวจสอบ",         icon:"🔍"},
+    {key:"revenue",  label:"ระบบงานรายได้",          icon:"💵"},
+    {key:"loan",     label:"ระบบรายได้เงินกู้",       icon:"🏦"},
+    {key:"budget",   label:"ระบบงบประมาณ",           icon:"📊"},
+    {key:"finance",  label:"ระบบงานการเงิน",         icon:"🏛️"},
+    {key:"account",  label:"ระบบงานบัญชี",           icon:"🧮"},
+    {key:"legal",    label:"ฝ่ายกฎหมาย",             icon:"⚖️"},
+  ];
+  const STATUSES = [
+    {key:"new",   label:"แจ้งปัญหาใหม่",     color:"#eb5a46"},
+    {key:"doing", label:"กำลังดำเนินการ",    color:"#ff9f1a"},
+    {key:"done",  label:"แก้ไขแล้ว",         color:"#61bd4f"},
+  ];
+
+  let currentDept = localStorage.getItem("it_lastDept") || DEPARTMENTS[0].key;
+  let currentCardId = null;
+  let cardsCache = [];      // all cards, all departments (loaded once)
+  let dragState = null;
+  let pollTimer = null;
+
+  // ---------------- API ----------------
+  const api = {
+    async getCards(){
+      const r = await fetch("/api/cards");
+      return r.json();
+    },
+    async createCard(payload){
+      const r = await fetch("/api/cards", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload),
+      });
+      return r.json();
+    },
+    async updateCard(id, patch){
+      const r = await fetch(`/api/cards/${id}`, {
+        method: "PATCH",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(patch),
+      });
+      return r.json();
+    },
+    async deleteCard(id){
+      await fetch(`/api/cards/${id}`, {method: "DELETE"});
+    },
+    async reorder(items){
+      await fetch("/api/cards/reorder", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(items),
+      });
+    },
+    async uploadAttachments(cardId, files){
+      const form = new FormData();
+      files.forEach(f => form.append("files", f));
+      const r = await fetch(`/api/cards/${cardId}/attachments`, {
+        method: "POST",
+        body: form,
+      });
+      return r.json();
+    },
+    async deleteAttachment(id){
+      await fetch(`/api/attachments/${id}`, {method: "DELETE"});
+    },
+  };
+
+  // ---------------- Helpers ----------------
+  function deptInfo(key){ return DEPARTMENTS.find(d => d.key === key) || DEPARTMENTS[0]; }
+  function statusInfo(key){ return STATUSES.find(s => s.key === key) || STATUSES[0]; }
+  function fmtDate(iso){
+    const d = new Date(iso);
+    return d.toLocaleString("th-TH", {day:"numeric", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit"});
+  }
+  function fmtSize(bytes){
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + " KB";
+    return (bytes/1024/1024).toFixed(1) + " MB";
+  }
+  function isImage(type){ return type && type.startsWith("image/"); }
+  function cardsForDept(key){
+    return cardsCache
+      .filter(c => c.department === key)
+      .sort((a,b) => a.position - b.position);
+  }
+
+  // ---------------- Sidebar ----------------
+  function renderSidebar(){
+    const ul = document.getElementById("menuList");
+    ul.innerHTML = "";
+    DEPARTMENTS.forEach(dep => {
+      const newCount = cardsCache.filter(c => c.department === dep.key && c.status === "new").length;
+      const li = document.createElement("li");
+      li.className = "menu-item" + (dep.key === currentDept ? " active" : "");
+      li.innerHTML = `
+        <span class="mi-icon">${dep.icon}</span>
+        <span class="mi-label">${dep.label}</span>
+        ${newCount ? `<span class="mi-new">${newCount}</span>` : ""}
+        <span class="mi-chev">〈</span>
+      `;
+      li.addEventListener("click", () => {
+        currentDept = dep.key;
+        localStorage.setItem("it_lastDept", dep.key);
+        document.getElementById("searchInput").value = "";
+        renderAll();
+      });
+      ul.appendChild(li);
+    });
+  }
+
+  // ---------------- Board / Columns ----------------
+  function renderBoard(){
+    const dep = deptInfo(currentDept);
+    document.getElementById("bhIcon").textContent = dep.icon;
+    document.getElementById("bhTitle").textContent = dep.label;
+
+    const wrap = document.getElementById("columnsWrap");
+    wrap.innerHTML = "";
+
+    const query = document.getElementById("searchInput").value.trim().toLowerCase();
+    let cards = cardsForDept(currentDept);
+    if (query) {
+      cards = cards.filter(c =>
+        c.title.toLowerCase().includes(query) ||
+        (c.description || "").toLowerCase().includes(query)
+      );
+    }
+
+    STATUSES.forEach(st => {
+      const col = document.createElement("div");
+      col.className = "column";
+      col.dataset.status = st.key;
+
+      const stCards = cards.filter(c => c.status === st.key);
+
+      col.innerHTML = `
+        <div class="column-head">
+          <span class="col-dot" style="background:${st.color}"></span>
+          <span>${st.label}</span>
+          <span class="count">${stCards.length}</span>
+        </div>
+        <div class="card-list" data-status="${st.key}"></div>
+      `;
+
+      const list = col.querySelector(".card-list");
+      stCards.forEach(card => list.appendChild(renderCardEl(card)));
+      setupColumnDnD(list, st.key);
+
+      const trigger = document.createElement("div");
+      trigger.className = "add-card-trigger";
+      trigger.innerHTML = "+ เพิ่มการ์ด";
+      trigger.addEventListener("click", () => showQuickAdd(col, st.key));
+      col.appendChild(trigger);
+
+      wrap.appendChild(col);
+    });
+  }
+
+  function renderCardEl(card){
+    const el = document.createElement("div");
+    el.className = "issue-card";
+    el.draggable = true;
+    el.dataset.id = card.id;
+
+    const st = statusInfo(card.status);
+    const coverAtt = (card.attachments || []).find(a => isImage(a.type));
+    const coverHtml = coverAtt ? `<img class="cover" src="${coverAtt.url}">` : "";
+    const attCount = (card.attachments || []).length;
+
+    el.innerHTML = `
+      <span class="status-stripe" style="background:${st.color}"></span>
+      ${coverHtml}
+      <div class="title"></div>
+      <div class="meta-row">
+        ${attCount ? `<span>📎 ${attCount}</span>` : ""}
+        ${card.reporter ? `<span>👤 ${escapeHtml(card.reporter)}</span>` : ""}
+        <span>${fmtDate(card.created_at)}</span>
+      </div>
+    `;
+    el.querySelector(".title").textContent = card.title;
+
+    el.addEventListener("click", (e) => {
+      if (dragState) return;
+      openModal(card.id);
+    });
+
+    el.addEventListener("dragstart", (e) => {
+      dragState = {id: card.id, fromStatus: card.status};
+      el.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+    });
+    el.addEventListener("dragend", () => {
+      el.classList.remove("dragging");
+      dragState = null;
+    });
+
+    return el;
+  }
+
+  function escapeHtml(s){
+    return (s || "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+
+  function setupColumnDnD(listEl, statusKey){
+    listEl.addEventListener("dragover", (e) => {
+      if (!dragState) return;
+      e.preventDefault();
+      listEl.classList.add("drag-over");
+      const after = getDragAfterElement(listEl, e.clientY);
+      const dragEl = document.querySelector(`.issue-card[data-id="${dragState.id}"]`);
+      if (!dragEl) return;
+      if (after == null) listEl.appendChild(dragEl);
+      else listEl.insertBefore(dragEl, after);
+    });
+    listEl.addEventListener("dragleave", (e) => {
+      if (e.target === listEl) listEl.classList.remove("drag-over");
+    });
+    listEl.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      listEl.classList.remove("drag-over");
+      if (!dragState) return;
+      await commitReorder(listEl, statusKey);
+    });
+  }
+
+  function getDragAfterElement(container, y){
+    const els = [...container.querySelectorAll(".issue-card:not(.dragging)")];
+    return els.reduce((closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = y - box.top - box.height/2;
+      if (offset < 0 && offset > closest.offset) return {offset, element: child};
+      return closest;
+    }, {offset: -Infinity, element: null}).element;
+  }
+
+  async function commitReorder(listEl, newStatus){
+    const ids = [...listEl.querySelectorAll(".issue-card")].map(el => Number(el.dataset.id));
+    const items = [];
+    ids.forEach((id, idx) => {
+      const card = cardsCache.find(c => c.id === id);
+      if (!card) return;
+      card.position = idx;
+      card.status = newStatus;
+      items.push({id, status: newStatus, position: idx});
+    });
+    await api.reorder(items);
+    renderAll(false);
+  }
+
+  // ---------------- Quick add ----------------
+  function showQuickAdd(colEl, statusKey){
+    const existing = colEl.querySelector(".quick-add");
+    if (existing) { existing.querySelector("textarea").focus(); return; }
+    const trigger = colEl.querySelector(".add-card-trigger");
+    trigger.style.display = "none";
+    stopPolling();
+
+    const box = document.createElement("div");
+    box.className = "quick-add";
+    box.innerHTML = `
+      <textarea rows="2" placeholder="พิมพ์หัวข้อปัญหา..."></textarea>
+      <div class="qa-actions">
+        <button class="btn btn-primary" id="qaSave">เพิ่มการ์ด</button>
+        <button class="btn btn-ghost" id="qaCancel">✕</button>
+      </div>
+    `;
+    colEl.appendChild(box);
+    const ta = box.querySelector("textarea");
+    ta.focus();
+
+    function cancel(){ box.remove(); trigger.style.display = "flex"; startPolling(); }
+    box.querySelector("#qaCancel").addEventListener("click", cancel);
+    box.querySelector("#qaSave").addEventListener("click", save);
+    ta.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); save(); }
+      if (e.key === "Escape") cancel();
+    });
+
+    async function save(){
+      const title = ta.value.trim();
+      if (!title) { cancel(); return; }
+      const card = await api.createCard({department: currentDept, status: statusKey, title});
+      cardsCache.push(card);
+      box.remove();
+      trigger.style.display = "flex";
+      startPolling();
+      renderAll(false);
+    }
+  }
+
+  document.getElementById("searchInput").addEventListener("input", () => renderBoard());
+
+  // ---------------- Modal ----------------
+  const overlay = document.getElementById("overlay");
+  const fieldDeptSel = document.getElementById("fieldDept");
+  const fieldStatusSel = document.getElementById("fieldStatus");
+
+  DEPARTMENTS.forEach(d => {
+    const o = document.createElement("option");
+    o.value = d.key; o.textContent = `${d.icon} ${d.label}`;
+    fieldDeptSel.appendChild(o);
+  });
+  STATUSES.forEach(s => {
+    const o = document.createElement("option");
+    o.value = s.key; o.textContent = s.label;
+    fieldStatusSel.appendChild(o);
+  });
+
+  function openModal(cardId){
+    currentCardId = cardId;
+    const card = cardsCache.find(c => c.id === cardId);
+    if (!card) return;
+
+    document.getElementById("fieldTitle").value = card.title;
+    fieldDeptSel.value = card.department;
+    fieldStatusSel.value = card.status;
+    document.getElementById("fieldReporter").value = card.reporter || "";
+    document.getElementById("fieldDesc").value = card.description || "";
+    document.getElementById("metaLine").textContent =
+      `สร้างเมื่อ ${fmtDate(card.created_at)} · แก้ไขล่าสุด ${fmtDate(card.updated_at)}`;
+
+    renderAttachments(card);
+    renderCover(card);
+
+    overlay.classList.add("open");
+    stopPolling();
+  }
+
+  function renderCover(card){
+    const coverAtt = (card.attachments || []).find(a => isImage(a.type));
+    const img = document.getElementById("modalCover");
+    if (coverAtt) {
+      img.src = coverAtt.url;
+      img.style.display = "block";
+    } else {
+      img.style.display = "none";
+    }
+  }
+
+  function renderAttachments(card){
+    const grid = document.getElementById("attachGrid");
+    grid.innerHTML = "";
+    (card.attachments || []).forEach(att => {
+      const tile = document.createElement("a");
+      tile.className = "attach-tile";
+      tile.href = att.url;
+      tile.target = "_blank";
+      tile.rel = "noopener";
+      if (!isImage(att.type)) tile.download = att.name;
+
+      tile.innerHTML = isImage(att.type)
+        ? `<img src="${att.url}">`
+        : `<div class="file-icon">📄</div>`;
+      tile.innerHTML += `
+        <div class="fname">${escapeHtml(att.name)}</div>
+        <div class="fsize">${fmtSize(att.size)}</div>
+      `;
+      const rm = document.createElement("button");
+      rm.className = "attach-remove";
+      rm.textContent = "✕";
+      rm.addEventListener("click", async (e) => {
+        e.preventDefault(); e.stopPropagation();
+        await api.deleteAttachment(att.id);
+        card.attachments = card.attachments.filter(a => a.id !== att.id);
+        renderAttachments(card);
+        renderCover(card);
+        renderAll(false);
+      });
+      tile.appendChild(rm);
+      grid.appendChild(tile);
+    });
+  }
+
+  function closeModal(){
+    overlay.classList.remove("open");
+    currentCardId = null;
+    startPolling();
+  }
+  document.getElementById("modalClose").addEventListener("click", closeModal);
+  overlay.addEventListener("mousedown", (e) => { if (e.target === overlay) closeModal(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && overlay.classList.contains("open")) closeModal(); });
+
+  async function saveCurrentCard(patch){
+    const idx = cardsCache.findIndex(c => c.id === currentCardId);
+    if (idx === -1) return;
+    const updated = await api.updateCard(currentCardId, patch);
+    cardsCache[idx] = {...cardsCache[idx], ...updated};
+    document.getElementById("metaLine").textContent =
+      `สร้างเมื่อ ${fmtDate(cardsCache[idx].created_at)} · แก้ไขล่าสุด ${fmtDate(cardsCache[idx].updated_at)}`;
+  }
+
+  document.getElementById("fieldTitle").addEventListener("blur", (e) => {
+    const v = e.target.value.trim() || "ไม่มีชื่อ";
+    e.target.value = v;
+    saveCurrentCard({title: v}).then(() => renderAll(false));
+  });
+  document.getElementById("fieldDesc").addEventListener("blur", (e) => {
+    saveCurrentCard({description: e.target.value});
+  });
+  document.getElementById("fieldReporter").addEventListener("blur", (e) => {
+    saveCurrentCard({reporter: e.target.value}).then(() => renderAll(false));
+  });
+  fieldDeptSel.addEventListener("change", (e) => {
+    saveCurrentCard({department: e.target.value, position: 999999}).then(() => renderAll(false));
+  });
+  fieldStatusSel.addEventListener("change", (e) => {
+    saveCurrentCard({status: e.target.value, position: 999999}).then(() => renderAll(false));
+  });
+
+  document.getElementById("addAttachBtn").addEventListener("click", () => {
+    document.getElementById("fileInput").click();
+  });
+  document.getElementById("fileInput").addEventListener("change", async (e) => {
+    const files = [...e.target.files];
+    e.target.value = "";
+    if (!files.length) return;
+    const card = cardsCache.find(c => c.id === currentCardId);
+    if (!card) return;
+    const newAttachments = await api.uploadAttachments(currentCardId, files);
+    card.attachments = (card.attachments || []).concat(newAttachments);
+    renderAttachments(card);
+    renderCover(card);
+    renderAll(false);
+  });
+
+  document.getElementById("deleteCardBtn").addEventListener("click", async () => {
+    if (!currentCardId) return;
+    if (!confirm("ลบการ์ดนี้ใช่หรือไม่? การลบไม่สามารถย้อนกลับได้")) return;
+    await api.deleteCard(currentCardId);
+    cardsCache = cardsCache.filter(c => c.id !== currentCardId);
+    closeModal();
+    renderAll();
+  });
+
+  // ---------------- Master render ----------------
+  function renderAll(reloadSidebar = true){
+    renderSidebar();
+    renderBoard();
+  }
+
+  // ---------------- Live sync (polling) ----------------
+  function startPolling(){
+    if (pollTimer) return;
+    pollTimer = setInterval(async () => {
+      try {
+        const r = await fetch("/api/cards");
+        if (!r.ok) return;
+        cardsCache = await r.json();
+        renderAll();
+      } catch (err) { /* server unreachable, retry on next tick */ }
+    }, 5000);
+  }
+  function stopPolling(){
+    clearInterval(pollTimer);
+    pollTimer = null;
+  }
+
+  // ---------------- Init ----------------
+  (async function init(){
+    cardsCache = await api.getCards();
+    renderAll();
+    startPolling();
+  })();
+
+})();
+</script>
+</body>
+</html>

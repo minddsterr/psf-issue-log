@@ -1,0 +1,7 @@
+venv/
+data/
+__pycache__/
+*.pyc
+google_client_id.txt
+allowed_emails.txt
+.DS_Store

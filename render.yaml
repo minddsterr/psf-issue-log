@@ -1,0 +1,11 @@
+# Render Blueprint สำหรับ PSF Issue Log
+# ขึ้นฟรีที่ https://render.com  (New + → Blueprint → เชื่อม repo นี้)
+services:
+  - type: web
+    name: psf-issue-log
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python server.py
+    # หมายเหตุ: free tier ไม่มี persistent disk — ข้อมูลจะรีเซ็ตเมื่อ deploy ใหม่
+    # ถ้าต้องเก็บข้อมูลถาวร ให้ upgrade เป็น plan ที่มี disk แล้วเพิ่ม DATA_DIR=/data + disk mount
