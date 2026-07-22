@@ -120,6 +120,7 @@ def init_db():
     # migration: ฟิลด์ที่เพิ่มทีหลัง
     _ensure_column(cur, "cards", "assignee", "TEXT DEFAULT ''")
     _ensure_column(cur, "cards", "jira_url", "TEXT DEFAULT ''")
+    _ensure_column(cur, "cards", "priority", "TEXT DEFAULT ''")
     conn.commit()
     conn.close()
 
@@ -144,6 +145,7 @@ class CardUpdate(BaseModel):
     position: Optional[float] = None
     assignee: Optional[str] = None
     jira_url: Optional[str] = None
+    priority: Optional[str] = None
 
 
 class ReorderItem(BaseModel):
@@ -251,7 +253,7 @@ def update_card(card_id: int, patch: CardUpdate):
     cur.execute(
         _q(
             """UPDATE cards SET title=?, description=?, reporter=?, department=?,
-               status=?, position=?, assignee=?, jira_url=?, updated_at=? WHERE id=?"""
+               status=?, position=?, assignee=?, jira_url=?, priority=?, updated_at=? WHERE id=?"""
         ),
         (
             merged["title"],
@@ -262,6 +264,7 @@ def update_card(card_id: int, patch: CardUpdate):
             merged["position"],
             merged.get("assignee", ""),
             merged.get("jira_url", ""),
+            merged.get("priority", ""),
             merged["updated_at"],
             card_id,
         ),

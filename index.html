@@ -119,10 +119,42 @@
   .section > label{display:block;font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;}
   .section textarea{width:100%;min-height:90px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:14px;font-family:inherit;outline:none;resize:vertical;}
   .section textarea:focus{border-color:var(--brand);}
-  .jira-row{display:flex;gap:10px;align-items:center;}
-  .jira-row input{flex:1;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;outline:none;}
-  .jira-row input:focus{border-color:var(--brand);}
-  #jiraOpen{white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:6px;}
+  #fieldJira{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;outline:none;}
+  #fieldJira:focus{border-color:var(--brand);}
+  .jira-link{color:var(--brand);text-decoration:underline;word-break:break-all;font-size:14px;display:inline-block;padding:2px 0;}
+  .jira-link:hover{color:var(--brand-dark);}
+  .jira-link.empty{color:var(--muted);text-decoration:none;font-style:italic;}
+
+  /* priority tag chips (บนการ์ด) */
+  .chip.prio{gap:5px;}
+  .chip.prio .pdot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+  .chip.prio-high{background:#fdecea;color:#d64535;}
+  .chip.prio-high .pdot{background:#e5544b;}
+  .chip.prio-medium{background:#fdf4dc;color:#b8860b;}
+  .chip.prio-medium .pdot{background:#f2c00c;}
+  .chip.prio-low{background:#e7edfd;color:#2f6fed;}
+  .chip.prio-low .pdot{background:#2f6fed;}
+
+  /* edit / view mode */
+  .modal-top{display:flex;justify-content:space-between;align-items:center;}
+  .btn-edit{border:1px solid var(--line);background:#fff;color:var(--brand-dark);border-radius:9px;padding:8px 14px;font-size:13.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+  .btn-edit:hover{background:var(--brand-tint);}
+  .modal.viewing .field select,
+  .modal.viewing .field input[type=text],
+  .modal.viewing .section textarea,
+  .modal.viewing .modal-title-input{
+    border-color:transparent;background:transparent;padding-left:2px;
+    -webkit-appearance:none;appearance:none;
+  }
+  .modal.viewing .field select{pointer-events:none;background-image:none;}
+  .modal.viewing .section textarea{resize:none;}
+  .modal.viewing .modal-footer{display:none;}
+  .modal.viewing #fieldJira{display:none;}
+  .modal:not(.viewing) .jira-link{display:none;}
+  .modal:not(.viewing) #editBtn{display:none;}
+  .modal:not(.viewing) #addAttachBtn{display:inline-block;}
+  .modal.viewing #addAttachBtn{display:none;}
+  .modal.viewing .attach-remove{display:none;}
   .attach-grid{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;}
   .attach-tile{width:110px;border:1px solid var(--line);border-radius:9px;overflow:hidden;position:relative;background:#fafbfc;text-decoration:none;color:inherit;display:block;}
   .attach-tile img{width:100%;height:74px;object-fit:cover;display:block;background:#eee;}
@@ -173,9 +205,10 @@
     <img class="modal-cover" id="modalCover" style="display:none;">
     <div class="modal-body">
       <div class="modal-top">
+        <button class="btn-edit" id="editBtn">✏️ แก้ไข</button>
         <button class="modal-close" id="modalClose">✕</button>
       </div>
-      <input type="text" class="modal-title-input" id="fieldTitle" placeholder="ชื่อปัญหา...">
+      <input type="text" class="modal-title-input" id="fieldTitle" placeholder="ชื่อปัญหา..." readonly>
       <div class="field-row">
         <div class="field">
           <label>เมนู/ระบบ</label>
@@ -186,27 +219,29 @@
           <select id="fieldStatus" class="status-select"></select>
         </div>
         <div class="field">
+          <label>ความสำคัญ</label>
+          <select id="fieldPriority"></select>
+        </div>
+        <div class="field">
           <label>ผู้รับผิดชอบ</label>
           <select id="fieldAssignee"></select>
         </div>
         <div class="field">
           <label>ผู้แจ้ง (คนสร้าง)</label>
-          <input type="text" id="fieldReporter" placeholder="ชื่อผู้แจ้ง">
+          <input type="text" id="fieldReporter" placeholder="ชื่อผู้แจ้ง" readonly>
         </div>
       </div>
       <div class="meta-line" id="metaLine"></div>
 
       <div class="section">
         <label>รายละเอียดปัญหา</label>
-        <textarea id="fieldDesc" placeholder="อธิบายรายละเอียดปัญหาที่พบ..."></textarea>
+        <textarea id="fieldDesc" placeholder="อธิบายรายละเอียดปัญหาที่พบ..." readonly></textarea>
       </div>
 
       <div class="section">
         <label>ลิงก์ Jira</label>
-        <div class="jira-row">
-          <input type="text" id="fieldJira" placeholder="วางลิงก์ Jira ที่นี่ เช่น https://your.atlassian.net/browse/PSF-123">
-          <a id="jiraOpen" class="btn btn-secondary" target="_blank" rel="noopener" style="display:none">🔗 เปิด Jira</a>
-        </div>
+        <a id="jiraLink" class="jira-link" target="_blank" rel="noopener"></a>
+        <input type="text" id="fieldJira" placeholder="วางลิงก์ Jira ที่นี่ เช่น https://your.atlassian.net/browse/PSF-123" readonly>
       </div>
 
       <div class="section">
@@ -219,6 +254,7 @@
       <div class="modal-footer">
         <button class="btn btn-danger" id="deleteCardBtn">ลบการ์ดนี้</button>
         <div class="save-area">
+          <button class="btn btn-ghost" id="cancelEditBtn">ยกเลิก</button>
           <span class="save-hint" id="saveHint"></span>
           <button class="btn btn-primary" id="saveCardBtn" disabled>บันทึก</button>
         </div>
@@ -253,6 +289,12 @@
     {key:"mind",    label:"mind",    color:"#e84393"},  // ชมพู
     {key:"sarobia", label:"sarobia", color:"#2f6fed"},  // ฟ้า
   ];
+  const PRIORITIES = [
+    {key:"high",   label:"สูง",   icon:"🔴"},  // แดง
+    {key:"medium", label:"กลาง",  icon:"🟡"},  // เหลือง
+    {key:"low",    label:"ต่ำ",   icon:"🔵"},  // ฟ้า
+  ];
+  const PRIO_RANK = {high:0, medium:1, low:2};
 
   let currentDept = localStorage.getItem("it_lastDept") || DEPARTMENTS[0].key;
   let currentCardId = null;
@@ -261,6 +303,7 @@
   let pollTimer = null;
   let modalDirty = false;
   let modalOriginal = null;
+  let modalMode = "view";   // view | edit
 
   // ---------------- API ----------------
   const api = {
@@ -290,6 +333,8 @@
   function deptInfo(key){ return DEPARTMENTS.find(d => d.key === key) || DEPARTMENTS[0]; }
   function statusInfo(key){ return STATUSES.find(s => s.key === key) || STATUSES[0]; }
   function assigneeInfo(key){ return ASSIGNEES.find(a => a.key === key) || null; }
+  function priorityInfo(key){ return PRIORITIES.find(p => p.key === key) || null; }
+  function prioRank(key){ return PRIO_RANK[key] ?? 3; }
   function fmtDate(iso){
     const d = new Date(iso);
     return d.toLocaleString("th-TH", {day:"numeric", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit"});
@@ -308,6 +353,36 @@
     if (!u) return "";
     if (!/^https?:\/\//i.test(u)) return "https://" + u;
     return u;
+  }
+
+  // บีบอัดรูปก่อนอัปโหลด (ย่อขนาด + ลดคุณภาพ) เพื่อประหยัดพื้นที่ DB
+  function loadImage(file){
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+      img.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
+      img.src = url;
+    });
+  }
+  async function compressImage(file){
+    if (!file.type.startsWith("image/") || file.type === "image/gif") return file;
+    try {
+      const img = await loadImage(file);
+      const maxDim = 1600;
+      let w = img.naturalWidth, h = img.naturalHeight;
+      if (w > maxDim || h > maxDim) {
+        const s = maxDim / Math.max(w, h);
+        w = Math.round(w * s); h = Math.round(h * s);
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      const blob = await new Promise(res => canvas.toBlob(res, "image/jpeg", 0.72));
+      if (!blob || blob.size >= file.size) return file;   // ไม่เล็กลงก็ใช้ต้นฉบับ
+      const name = file.name.replace(/\.[^.]+$/, "") + ".jpg";
+      return new File([blob], name, {type: "image/jpeg"});
+    } catch (e) { return file; }
   }
   function cardsForDept(key){
     return cardsCache.filter(c => c.department === key).sort((a,b) => a.position - b.position);
@@ -370,7 +445,10 @@
       `;
 
       const list = col.querySelector(".card-list");
-      stCards.forEach(card => list.appendChild(renderCardEl(card)));
+      stCards
+        .slice()
+        .sort((a,b) => prioRank(a.priority) - prioRank(b.priority) || a.position - b.position)
+        .forEach(card => list.appendChild(renderCardEl(card)));
       setupColumnDnD(list, st.key);
 
       const trigger = document.createElement("div");
@@ -395,7 +473,9 @@
     const attCount = (card.attachments || []).length;
     const asg = assigneeInfo(card.assignee);
 
+    const prio = priorityInfo(card.priority);
     const chips = [];
+    if (prio) chips.push(`<span class="chip prio prio-${prio.key}"><span class="pdot"></span>${prio.label}</span>`);
     if (card.jira_url) chips.push(`<a class="chip jira" data-nodrag draggable="false">🔗 Jira</a>`);
     if (attCount) chips.push(`<span class="chip att">📎 ${attCount}</span>`);
 
@@ -557,12 +637,14 @@
   document.getElementById("searchInput").addEventListener("input", () => renderBoard());
 
   // ---------------- Modal ----------------
+  const modalEl = document.getElementById("modal");
   const overlay = document.getElementById("overlay");
   const fieldDeptSel = document.getElementById("fieldDept");
   const fieldStatusSel = document.getElementById("fieldStatus");
   const fieldAssigneeSel = document.getElementById("fieldAssignee");
+  const fieldPrioritySel = document.getElementById("fieldPriority");
   const fieldJira = document.getElementById("fieldJira");
-  const jiraOpen = document.getElementById("jiraOpen");
+  const jiraLink = document.getElementById("jiraLink");
 
   DEPARTMENTS.forEach(d => {
     const o = document.createElement("option");
@@ -573,6 +655,15 @@
     const o = document.createElement("option");
     o.value = s.key; o.textContent = s.label;
     fieldStatusSel.appendChild(o);
+  });
+  // ความสำคัญ
+  const prioNone = document.createElement("option");
+  prioNone.value = ""; prioNone.textContent = "— ไม่ระบุ —";
+  fieldPrioritySel.appendChild(prioNone);
+  PRIORITIES.forEach(p => {
+    const o = document.createElement("option");
+    o.value = p.key; o.textContent = `${p.icon} ${p.label}`;
+    fieldPrioritySel.appendChild(o);
   });
   // ผู้รับผิดชอบ: ไม่ระบุ + รายชื่อ
   const noneOpt = document.createElement("option");
@@ -589,14 +680,7 @@
     const card = cardsCache.find(c => c.id === cardId);
     if (!card) return;
 
-    document.getElementById("fieldTitle").value = card.title;
-    fieldDeptSel.value = card.department;
-    fieldStatusSel.value = card.status;
-    fieldAssigneeSel.value = card.assignee || "";
-    document.getElementById("fieldReporter").value = card.reporter || "";
-    document.getElementById("fieldDesc").value = card.description || "";
-    fieldJira.value = card.jira_url || "";
-    updateJiraOpen();
+    fillFields(card);
     document.getElementById("metaLine").textContent =
       `สร้างเมื่อ ${fmtDate(card.created_at)} · แก้ไขล่าสุด ${fmtDate(card.updated_at)}`;
 
@@ -604,10 +688,46 @@
     renderCover(card);
 
     modalOriginal = {department: card.department, status: card.status};
-    setDirty(false);
+    setMode("view");
 
     overlay.classList.add("open");
     stopPolling();
+  }
+
+  function fillFields(card){
+    document.getElementById("fieldTitle").value = card.title;
+    fieldDeptSel.value = card.department;
+    fieldStatusSel.value = card.status;
+    fieldPrioritySel.value = card.priority || "";
+    fieldAssigneeSel.value = card.assignee || "";
+    document.getElementById("fieldReporter").value = card.reporter || "";
+    document.getElementById("fieldDesc").value = card.description || "";
+    fieldJira.value = card.jira_url || "";
+    updateJiraView();
+  }
+
+  // สลับโหมด ดู <-> แก้ไข
+  function setMode(mode){
+    modalMode = mode;
+    modalEl.classList.toggle("viewing", mode === "view");
+    const ro = (mode === "view");
+    ["fieldTitle", "fieldReporter", "fieldDesc", "fieldJira"].forEach(id => {
+      document.getElementById(id).readOnly = ro;
+    });
+    if (mode === "view") setDirty(false);
+  }
+
+  function updateJiraView(){
+    const v = fieldJira.value.trim();
+    if (v) {
+      jiraLink.href = normalizeUrl(v);
+      jiraLink.textContent = v;
+      jiraLink.classList.remove("empty");
+    } else {
+      jiraLink.removeAttribute("href");
+      jiraLink.textContent = "— ไม่มีลิงก์ —";
+      jiraLink.classList.add("empty");
+    }
   }
 
   const saveBtn = document.getElementById("saveCardBtn");
@@ -618,12 +738,6 @@
     saveBtn.disabled = !dirty;
     if (dirty) { saveHint.textContent = "มีการแก้ไขที่ยังไม่บันทึก"; saveHint.className = "save-hint unsaved"; }
     else { saveHint.textContent = ""; saveHint.className = "save-hint"; }
-  }
-
-  function updateJiraOpen(){
-    const v = fieldJira.value.trim();
-    if (v) { jiraOpen.href = normalizeUrl(v); jiraOpen.style.display = "inline-flex"; }
-    else { jiraOpen.style.display = "none"; jiraOpen.removeAttribute("href"); }
   }
 
   function renderCover(card){
@@ -670,10 +784,24 @@
   ["fieldTitle", "fieldReporter", "fieldDesc"].forEach(id => {
     document.getElementById(id).addEventListener("input", () => setDirty(true));
   });
-  fieldJira.addEventListener("input", () => { setDirty(true); updateJiraOpen(); });
+  fieldJira.addEventListener("input", () => { setDirty(true); updateJiraView(); });
   fieldDeptSel.addEventListener("change", () => setDirty(true));
   fieldStatusSel.addEventListener("change", () => setDirty(true));
   fieldAssigneeSel.addEventListener("change", () => setDirty(true));
+  fieldPrioritySel.addEventListener("change", () => setDirty(true));
+
+  // ปุ่มดินสอ "แก้ไข" → เข้าโหมดแก้ไข
+  document.getElementById("editBtn").addEventListener("click", () => {
+    setMode("edit");
+    document.getElementById("fieldTitle").focus();
+  });
+  // ปุ่ม "ยกเลิก" → คืนค่าเดิม กลับโหมดดู
+  document.getElementById("cancelEditBtn").addEventListener("click", () => {
+    if (modalDirty && !confirm("ยกเลิกการแก้ไข? การเปลี่ยนแปลงจะไม่ถูกบันทึก")) return;
+    const card = cardsCache.find(c => c.id === currentCardId);
+    if (card) fillFields(card);
+    setMode("view");
+  });
 
   saveBtn.addEventListener("click", async () => {
     if (!currentCardId) return;
@@ -692,6 +820,7 @@
       status: fieldStatusSel.value,
       assignee: fieldAssigneeSel.value,
       jira_url: fieldJira.value.trim(),
+      priority: fieldPrioritySel.value,
     };
     if (modalOriginal &&
         (patch.department !== modalOriginal.department || patch.status !== modalOriginal.status)) {
@@ -707,9 +836,9 @@
       document.getElementById("metaLine").textContent =
         `สร้างเมื่อ ${fmtDate(cardsCache[idx].created_at)} · แก้ไขล่าสุด ${fmtDate(cardsCache[idx].updated_at)}`;
       renderAll(false);
-      setDirty(false);
+      setMode("view");
       saveHint.textContent = "บันทึกแล้ว ✓"; saveHint.className = "save-hint saved";
-      setTimeout(() => { if (!modalDirty) saveHint.textContent = ""; }, 2000);
+      setTimeout(() => { saveHint.textContent = ""; }, 2000);
     } catch (e) {
       setDirty(true);
       alert("บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง");
@@ -727,9 +856,21 @@
     if (!files.length) return;
     const card = cardsCache.find(c => c.id === currentCardId);
     if (!card) return;
-    const newAttachments = await api.uploadAttachments(currentCardId, files);
-    card.attachments = (card.attachments || []).concat(newAttachments);
-    renderAttachments(card); renderCover(card); renderAll(false);
+    const btn = document.getElementById("addAttachBtn");
+    const orig = btn.textContent;
+    btn.textContent = "กำลังบีบอัด/อัปโหลด...";
+    btn.disabled = true;
+    try {
+      const processed = [];
+      for (const f of files) processed.push(await compressImage(f));  // บีบอัดรูปก่อน
+      const newAttachments = await api.uploadAttachments(currentCardId, processed);
+      card.attachments = (card.attachments || []).concat(newAttachments);
+      renderAttachments(card); renderCover(card); renderAll(false);
+    } catch (err) {
+      alert("อัปโหลดไม่สำเร็จ (ไฟล์อาจใหญ่เกิน 10 MB)");
+    } finally {
+      btn.textContent = orig; btn.disabled = false;
+    }
   });
 
   document.getElementById("deleteCardBtn").addEventListener("click", async () => {
