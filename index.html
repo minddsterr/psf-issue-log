@@ -6,239 +6,154 @@
 <title>PSF Issue Log</title>
 <style>
   :root{
-    --sidebar-w: 260px;
-    --blue: #0079bf;
-    --blue-dark: #026aa7;
-    --bg: #f4f5f7;
-    --card-bg: #ffffff;
-    --text: #172b4d;
-    --text-light: #5e6c84;
-    --border: #dfe1e6;
-    --new: #eb5a46;
-    --doing: #ff9f1a;
-    --done: #61bd4f;
-    --shadow: 0 1px 2px rgba(9,30,66,.25);
+    --brand:#2f6fed; --brand-dark:#1e50c8; --brand-tint:#eaf1fe;
+    --bg:#eef1f6; --panel:#ffffff; --ink:#1b2437; --muted:#6b7688; --line:#e4e8ef;
+    --new:#e5544b; --doing:#f0993a; --done:#37b24d;
+    --shadow-sm:0 1px 2px rgba(20,30,55,.08);
+    --shadow-md:0 4px 14px rgba(20,30,55,.10);
+    --shadow-lg:0 10px 30px rgba(20,30,55,.16);
+    /* compat aliases (โค้ดเดิมอ้างชื่อพวกนี้) */
+    --blue:#2f6fed; --blue-dark:#1e50c8; --text:#1b2437; --text-light:#6b7688;
+    --border:#e4e8ef; --shadow:0 1px 2px rgba(20,30,55,.08);
   }
   *{box-sizing:border-box;}
   html,body{height:100%;}
   body{
-    margin:0;
-    font-family: "Segoe UI","Sarabun",-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;
-    color:var(--text);
-    background:var(--bg);
-    display:flex;
-    height:100vh;
-    overflow:hidden;
+    margin:0;font-family:"Segoe UI","Sarabun",-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);background:var(--bg);display:flex;height:100vh;overflow:hidden;
+    -webkit-font-smoothing:antialiased;
   }
 
   /* ---------- Sidebar ---------- */
-  .sidebar{
-    width:var(--sidebar-w);
-    min-width:var(--sidebar-w);
-    background:#fff;
-    border-right:1px solid var(--border);
-    display:flex;
-    flex-direction:column;
-    overflow-y:auto;
+  .sidebar{width:270px;min-width:270px;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;}
+  .brand{display:flex;align-items:center;gap:11px;padding:20px 20px 16px;border-bottom:1px solid var(--line);}
+  .brand .logo{
+    width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--brand),#5b8ef7);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;box-shadow:var(--shadow-md);flex-shrink:0;
   }
-  .sidebar-header{
-    padding:18px 20px 10px;
-    font-weight:700;
-    font-size:15px;
-    color:var(--text);
-    letter-spacing:.2px;
-  }
-  .menu-list{list-style:none;margin:0;padding:6px 8px 20px;}
-  .menu-item{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    padding:11px 12px;
-    border-radius:8px;
-    cursor:pointer;
-    font-size:14.5px;
-    color:#333;
-    user-select:none;
-    transition:background .12s;
-  }
-  .menu-item:hover{background:#f4f5f7;}
-  .menu-item.active{background:#e4ecf7;color:var(--blue-dark);font-weight:600;}
-  .menu-item .mi-icon{font-size:17px;width:22px;text-align:center;flex-shrink:0;}
+  .brand .bt{font-weight:800;font-size:16px;letter-spacing:.2px;}
+  .brand .bs{font-size:11.5px;color:var(--muted);margin-top:1px;}
+  .menu-label{font-size:11px;font-weight:700;color:#9aa4b4;letter-spacing:1px;text-transform:uppercase;padding:16px 22px 8px;}
+  .menu-list{list-style:none;margin:0;padding:0 12px 20px;flex:1;overflow-y:auto;}
+  .menu-item{display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:11px;cursor:pointer;font-size:14.5px;color:#3c4658;margin-bottom:2px;transition:background .12s;user-select:none;}
+  .menu-item:hover{background:#f3f5f9;}
+  .menu-item.active{background:var(--brand-tint);color:var(--brand-dark);font-weight:700;}
+  .menu-item .mi-icon{width:34px;height:34px;border-radius:9px;background:#f1f4f8;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+  .menu-item.active .mi-icon{background:#fff;box-shadow:var(--shadow-sm);}
   .menu-item .mi-label{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .menu-item .mi-new{
-    font-size:11.5px;font-weight:700;color:#fff;background:var(--new);
-    min-width:20px;height:20px;border-radius:50%;flex-shrink:0;
-    display:flex;align-items:center;justify-content:center;padding:0 5px;
-  }
-  .menu-item .mi-chev{font-size:11px;color:#8993a4;transform:rotate(180deg);flex-shrink:0;}
+  .menu-item .mi-badge{background:var(--new);color:#fff;font-size:11px;font-weight:700;min-width:20px;height:20px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 6px;flex-shrink:0;}
 
-  /* ---------- Main board area ---------- */
+  /* ---------- Main ---------- */
   .board-area{flex:1;display:flex;flex-direction:column;min-width:0;}
-  .board-header{
-    padding:16px 24px;
-    background:#fff;
-    border-bottom:1px solid var(--border);
-    display:flex;
-    align-items:center;
-    gap:16px;
-    flex-wrap:wrap;
-  }
-  .board-header h1{
-    font-size:19px;margin:0;display:flex;align-items:center;gap:10px;flex:1;min-width:200px;
-  }
-  .board-header h1 .bh-icon{font-size:22px;}
-  .search-box{
-    display:flex;align-items:center;gap:6px;background:var(--bg);
-    border:1px solid var(--border);border-radius:8px;padding:7px 12px;min-width:220px;
-  }
-  .search-box input{border:none;background:transparent;outline:none;font-size:14px;flex:1;color:var(--text);}
-  .btn{
-    border:none;border-radius:6px;padding:9px 16px;font-size:14px;font-weight:600;
-    cursor:pointer;transition:background .12s,opacity .12s;
-  }
-  .btn-primary{background:var(--blue);color:#fff;}
-  .btn-primary:hover{background:var(--blue-dark);}
-  .btn-secondary{background:#e4e6ea;color:#333;}
-  .btn-secondary:hover{background:#d7dadf;}
-  .btn-danger{background:#fff;color:#c9372c;border:1px solid #c9372c33;}
+  .board-header{display:flex;align-items:center;gap:18px;padding:18px 26px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap;}
+  .board-header h1{font-size:20px;margin:0;display:flex;align-items:center;gap:12px;flex:1;font-weight:800;min-width:200px;}
+  .board-header h1 .bh-icon{width:40px;height:40px;border-radius:11px;background:#fdeeee;display:flex;align-items:center;justify-content:center;font-size:20px;}
+  .search-box{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 14px;min-width:240px;color:var(--muted);}
+  .search-box input{border:0;background:transparent;outline:0;font-size:14px;flex:1;color:var(--ink);font-family:inherit;}
+  .btn{border:none;border-radius:9px;padding:9px 16px;font-size:14px;font-weight:700;cursor:pointer;transition:background .12s,opacity .12s;}
+  .btn-primary{background:var(--brand);color:#fff;}
+  .btn-primary:hover{background:var(--brand-dark);}
+  .btn-secondary{background:#eef1f6;color:#3c4658;}
+  .btn-secondary:hover{background:#e2e7ef;}
+  .btn-danger{background:#fff;color:#d64535;border:1px solid #f0c4bf;}
   .btn-danger:hover{background:#fdecea;}
-  .btn-ghost{background:transparent;color:var(--text-light);}
-  .btn-ghost:hover{background:#f4f5f7;}
+  .btn-ghost{background:transparent;color:var(--muted);}
+  .btn-ghost:hover{background:#f3f5f9;}
 
-  .columns-wrap{
-    flex:1;display:flex;gap:16px;padding:18px 24px;overflow-x:auto;overflow-y:hidden;align-items:flex-start;
-  }
-  .column{
-    background:#ebecf0;border-radius:10px;flex:1 1 0;min-width:260px;
-    display:flex;flex-direction:column;max-height:100%;
-  }
-  .column-head{
-    padding:12px 12px 8px;display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;
-  }
-  .col-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
-  .column-head .count{color:var(--text-light);font-weight:600;font-size:12.5px;}
-  .card-list{
-    flex:1;overflow-y:auto;padding:2px 10px;display:flex;flex-direction:column;gap:8px;min-height:40px;
-  }
-  .card-list{transition:background .15s ease;}
-  .card-list.drag-over{background:#dce3ea;border-radius:8px;}
-  .issue-card{
-    background:var(--card-bg);border-radius:8px;box-shadow:var(--shadow);
-    padding:10px 10px 9px;cursor:grab;position:relative;
-    transition:box-shadow .14s ease, transform .14s ease;
-  }
-  .issue-card:hover{background:#f9fafc;box-shadow:0 2px 6px rgba(9,30,66,.2);}
+  .columns-wrap{flex:1;display:flex;gap:20px;padding:22px 26px;overflow-x:auto;overflow-y:hidden;align-items:flex-start;}
+  .column{background:#e9edf3;border-radius:16px;flex:1 1 0;min-width:270px;display:flex;flex-direction:column;max-height:100%;box-shadow:inset 0 0 0 1px rgba(20,30,55,.03);}
+  .column-head{display:flex;align-items:center;gap:10px;padding:15px 16px 12px;}
+  .col-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .column-head .col-title{font-weight:800;font-size:14.5px;flex:1;}
+  .column-head .count{background:#fff;color:var(--muted);font-size:12px;font-weight:800;min-width:24px;height:22px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 8px;box-shadow:var(--shadow-sm);}
+  .card-list{padding:0 12px;display:flex;flex-direction:column;gap:11px;overflow-y:auto;min-height:12px;transition:background .15s ease;}
+  .card-list.drag-over{background:#dbe2ec;border-radius:12px;}
+
+  .issue-card{background:var(--panel);border-radius:13px;box-shadow:var(--shadow-sm);padding:0;overflow:hidden;cursor:grab;border:1px solid rgba(20,30,55,.04);position:relative;transition:box-shadow .15s,transform .15s;}
+  .issue-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);}
   .issue-card:active{cursor:grabbing;}
   .issue-card.dragging{opacity:.4;box-shadow:none;transform:scale(.98);}
-  @keyframes cardSettle{
-    0%{transform:scale(1.05);box-shadow:0 10px 22px rgba(9,30,66,.30);}
-    100%{transform:scale(1);box-shadow:var(--shadow);}
-  }
+  @keyframes cardSettle{0%{transform:scale(1.05);box-shadow:var(--shadow-lg);}100%{transform:scale(1);box-shadow:var(--shadow-sm);}}
   .issue-card.just-moved{animation:cardSettle .24s ease;}
-  .issue-card .cover{
-    width:calc(100% + 20px);margin:-10px -10px 8px;border-radius:8px 8px 0 0;
-    max-height:120px;object-fit:cover;display:block;
-  }
-  .issue-card .status-stripe{
-    position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:8px 0 0 8px;
-  }
-  .issue-card .title{font-size:14px;line-height:1.4;margin-bottom:6px;word-break:break-word;}
-  .issue-card .meta-row{display:flex;gap:10px;align-items:center;color:var(--text-light);font-size:12px;flex-wrap:wrap;}
-  .issue-card .meta-row span{display:flex;align-items:center;gap:3px;}
-  .add-card-trigger{
-    margin:2px 8px 12px;padding:9px 10px;border-radius:8px;color:var(--text-light);
-    font-size:14px;cursor:pointer;display:flex;align-items:center;gap:6px;
-  }
-  .add-card-trigger:hover{background:#dce3ea;color:var(--text);}
-  .quick-add{margin:2px 8px 10px;display:flex;flex-direction:column;gap:8px;}
-  .quick-add textarea{
-    border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:14px;resize:none;
-    font-family:inherit;box-shadow:var(--shadow);outline:none;
-  }
+  .issue-card .status-stripe{position:absolute;left:0;top:0;bottom:0;width:4px;z-index:1;}
+  .issue-card .cover{height:110px;background-size:cover;background-position:center;background-color:#dfe4ec;}
+  .issue-card .card-body{padding:12px 14px 13px 17px;}
+  .issue-card .chips{display:flex;gap:6px;margin-bottom:9px;flex-wrap:wrap;}
+  .chip{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;display:inline-flex;align-items:center;gap:4px;text-decoration:none;}
+  .chip.att{background:#eef1f6;color:#5b6473;}
+  .chip.jira{background:#e7edfd;color:var(--brand-dark);cursor:pointer;}
+  .chip.jira:hover{background:#d8e2fc;}
+  .issue-card .title{font-size:14.5px;line-height:1.45;font-weight:600;margin-bottom:11px;word-break:break-word;}
+  .issue-card .meta-row{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;}
+  .assignee{display:flex;align-items:center;gap:6px;font-weight:600;color:#3c4658;}
+  .assignee .av{width:24px;height:24px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;}
+  .assignee.none{color:#a2abba;font-weight:500;font-style:normal;}
+  .meta-row .date{margin-left:auto;white-space:nowrap;}
+
+  .add-card-trigger{margin:6px 12px 14px;padding:11px;border-radius:11px;color:var(--muted);font-size:14px;cursor:pointer;display:flex;align-items:center;gap:8px;justify-content:center;border:1.5px dashed #cdd5e0;transition:.12s;}
+  .add-card-trigger:hover{background:#fff;color:var(--brand-dark);border-color:var(--brand);}
+  .quick-add{margin:2px 12px 12px;display:flex;flex-direction:column;gap:8px;}
+  .quick-add textarea{border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:14px;resize:none;font-family:inherit;box-shadow:var(--shadow-sm);outline:none;}
+  .quick-add textarea:focus{border-color:var(--brand);}
   .quick-add .qa-actions{display:flex;gap:8px;align-items:center;}
 
   /* ---------- Modal ---------- */
-  .overlay{
-    position:fixed;inset:0;background:rgba(9,30,66,.54);display:none;
-    align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;z-index:100;
-  }
+  .overlay{position:fixed;inset:0;background:rgba(20,30,55,.5);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;z-index:100;}
   .overlay.open{display:flex;}
-  .modal{
-    background:#fff;border-radius:10px;width:100%;max-width:680px;
-    box-shadow:0 8px 30px rgba(9,30,66,.35);overflow:hidden;
-  }
-  .modal-cover{width:100%;max-height:220px;object-fit:cover;display:block;background:#dfe1e6;}
-  .modal-body{padding:20px 24px 26px;}
+  .modal{background:#fff;border-radius:16px;width:100%;max-width:700px;box-shadow:var(--shadow-lg);overflow:hidden;}
+  .modal-cover{width:100%;max-height:220px;object-fit:cover;display:block;background:#dfe4ec;}
+  .modal-body{padding:20px 26px 26px;}
   .modal-top{display:flex;justify-content:flex-end;}
-  .modal-close{
-    border:none;background:transparent;font-size:20px;cursor:pointer;color:var(--text-light);
-    padding:4px 8px;border-radius:4px;
-  }
-  .modal-close:hover{background:#f4f5f7;}
-  .modal-title-input{
-    width:100%;font-size:20px;font-weight:700;border:none;outline:none;padding:6px 8px;
-    border-radius:6px;margin:2px 0 14px;font-family:inherit;
-  }
-  .modal-title-input:hover, .modal-title-input:focus{background:#f4f5f7;}
-  .field-row{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:18px;}
-  .field{flex:1;min-width:180px;}
-  .field label{
-    display:block;font-size:12px;font-weight:700;color:var(--text-light);
-    text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;
-  }
-  .field select, .field input[type=text]{
-    width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;
-    font-size:14px;font-family:inherit;outline:none;background:#fff;
-  }
-  .field select:focus, .field input:focus{border-color:var(--blue);}
-  .status-select{font-weight:600;}
-  .meta-line{font-size:12.5px;color:var(--text-light);margin-bottom:16px;}
+  .modal-close{border:none;background:transparent;font-size:20px;cursor:pointer;color:var(--muted);padding:4px 8px;border-radius:8px;}
+  .modal-close:hover{background:#f3f5f9;}
+  .modal-title-input{width:100%;font-size:21px;font-weight:800;border:none;outline:none;padding:6px 8px;border-radius:8px;margin:2px 0 16px;font-family:inherit;color:var(--ink);}
+  .modal-title-input:hover,.modal-title-input:focus{background:#f3f5f9;}
+  .field-row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:18px;}
+  .field{flex:1;min-width:150px;}
+  .field label{display:block;font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;}
+  .field select,.field input[type=text]{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;outline:none;background:#fff;}
+  .field select:focus,.field input:focus{border-color:var(--brand);}
+  .status-select{font-weight:700;}
+  .meta-line{font-size:12.5px;color:var(--muted);margin-bottom:16px;}
   .section{margin-bottom:20px;}
-  .section > label{
-    display:block;font-size:12px;font-weight:700;color:var(--text-light);
-    text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;
-  }
-  .section textarea{
-    width:100%;min-height:90px;border:1px solid var(--border);border-radius:6px;
-    padding:10px 12px;font-size:14px;font-family:inherit;outline:none;resize:vertical;
-  }
-  .section textarea:focus{border-color:var(--blue);}
+  .section > label{display:block;font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;}
+  .section textarea{width:100%;min-height:90px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:14px;font-family:inherit;outline:none;resize:vertical;}
+  .section textarea:focus{border-color:var(--brand);}
+  .jira-row{display:flex;gap:10px;align-items:center;}
+  .jira-row input{flex:1;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;outline:none;}
+  .jira-row input:focus{border-color:var(--brand);}
+  #jiraOpen{white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:6px;}
   .attach-grid{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;}
-  .attach-tile{
-    width:110px;border:1px solid var(--border);border-radius:8px;overflow:hidden;
-    position:relative;background:#fafbfc;text-decoration:none;color:inherit;display:block;
-  }
+  .attach-tile{width:110px;border:1px solid var(--line);border-radius:9px;overflow:hidden;position:relative;background:#fafbfc;text-decoration:none;color:inherit;display:block;}
   .attach-tile img{width:100%;height:74px;object-fit:cover;display:block;background:#eee;}
-  .attach-tile .file-icon{
-    height:74px;display:flex;align-items:center;justify-content:center;font-size:28px;background:#eef1f4;
-  }
-  .attach-tile .fname{
-    font-size:11px;padding:5px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  }
-  .attach-tile .fsize{font-size:10px;color:var(--text-light);padding:0 6px 5px;}
-  .attach-remove{
-    position:absolute;top:3px;right:3px;background:rgba(0,0,0,.55);color:#fff;border:none;
-    width:20px;height:20px;border-radius:50%;cursor:pointer;font-size:12px;line-height:1;
-  }
+  .attach-tile .file-icon{height:74px;display:flex;align-items:center;justify-content:center;font-size:28px;background:#eef1f4;}
+  .attach-tile .fname{font-size:11px;padding:5px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .attach-tile .fsize{font-size:10px;color:var(--muted);padding:0 6px 5px;}
+  .attach-remove{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.55);color:#fff;border:none;width:20px;height:20px;border-radius:50%;cursor:pointer;font-size:12px;line-height:1;}
   .attach-remove:hover{background:rgba(0,0,0,.8);}
   .modal-footer{display:flex;justify-content:space-between;align-items:center;margin-top:6px;gap:12px;}
   .save-area{display:flex;align-items:center;gap:12px;}
-  .save-hint{font-size:13px;font-weight:600;white-space:nowrap;}
+  .save-hint{font-size:13px;font-weight:700;white-space:nowrap;}
   .save-hint.unsaved{color:#e67700;}
   .save-hint.saved{color:var(--done);}
   #saveCardBtn:disabled{opacity:.45;cursor:default;}
 
-  .empty-state{
-    padding:60px 20px;text-align:center;color:var(--text-light);font-size:14px;width:100%;
-  }
-  ::-webkit-scrollbar{width:8px;height:8px;}
-  ::-webkit-scrollbar-thumb{background:#c1c7d0;border-radius:4px;}
+  ::-webkit-scrollbar{width:9px;height:9px;}
+  ::-webkit-scrollbar-thumb{background:#c6cdd8;border-radius:5px;}
+  ::-webkit-scrollbar-thumb:hover{background:#b3bbc9;}
 </style>
 </head>
 <body>
 
 <aside class="sidebar">
-  <div class="sidebar-header">เมนูหลัก</div>
+  <div class="brand">
+    <div class="logo">🗂️</div>
+    <div>
+      <div class="bt">PSF Issue Log</div>
+      <div class="bs">ระบบแจ้งปัญหาการใช้งาน</div>
+    </div>
+  </div>
+  <div class="menu-label">เมนูหลัก</div>
   <ul class="menu-list" id="menuList"></ul>
 </aside>
 
@@ -271,7 +186,11 @@
           <select id="fieldStatus" class="status-select"></select>
         </div>
         <div class="field">
-          <label>ผู้แจ้งปัญหา</label>
+          <label>ผู้รับผิดชอบ</label>
+          <select id="fieldAssignee"></select>
+        </div>
+        <div class="field">
+          <label>ผู้แจ้ง (คนสร้าง)</label>
           <input type="text" id="fieldReporter" placeholder="ชื่อผู้แจ้ง">
         </div>
       </div>
@@ -280,6 +199,14 @@
       <div class="section">
         <label>รายละเอียดปัญหา</label>
         <textarea id="fieldDesc" placeholder="อธิบายรายละเอียดปัญหาที่พบ..."></textarea>
+      </div>
+
+      <div class="section">
+        <label>ลิงก์ Jira</label>
+        <div class="jira-row">
+          <input type="text" id="fieldJira" placeholder="วางลิงก์ Jira ที่นี่ เช่น https://your.atlassian.net/browse/PSF-123">
+          <a id="jiraOpen" class="btn btn-secondary" target="_blank" rel="noopener" style="display:none">🔗 เปิด Jira</a>
+        </div>
       </div>
 
       <div class="section">
@@ -318,68 +245,51 @@
     {key:"legal",    label:"ฝ่ายกฎหมาย",             icon:"⚖️"},
   ];
   const STATUSES = [
-    {key:"new",   label:"แจ้งปัญหาใหม่",     color:"#eb5a46"},
-    {key:"doing", label:"กำลังดำเนินการ",    color:"#ff9f1a"},
-    {key:"done",  label:"แก้ไขแล้ว",         color:"#61bd4f"},
+    {key:"new",   label:"แจ้งปัญหาใหม่",     color:"#e5544b"},
+    {key:"doing", label:"กำลังดำเนินการ",    color:"#f0993a"},
+    {key:"done",  label:"แก้ไขแล้ว",         color:"#37b24d"},
+  ];
+  const ASSIGNEES = [
+    {key:"mind",    label:"mind",    color:"#e84393"},  // ชมพู
+    {key:"sarobia", label:"sarobia", color:"#2f6fed"},  // ฟ้า
   ];
 
   let currentDept = localStorage.getItem("it_lastDept") || DEPARTMENTS[0].key;
   let currentCardId = null;
-  let cardsCache = [];      // all cards, all departments (loaded once)
+  let cardsCache = [];
   let dragState = null;
   let pollTimer = null;
-  let modalDirty = false;   // มีการแก้ไขในการ์ดที่ยังไม่บันทึก
-  let modalOriginal = null; // ค่าเดิมตอนเปิดการ์ด (ไว้เทียบว่าเปลี่ยนคอลัมน์ไหม)
+  let modalDirty = false;
+  let modalOriginal = null;
 
   // ---------------- API ----------------
   const api = {
-    async getCards(){
-      const r = await fetch("/api/cards");
-      return r.json();
-    },
+    async getCards(){ const r = await fetch("/api/cards"); return r.json(); },
     async createCard(payload){
-      const r = await fetch("/api/cards", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(payload),
-      });
+      const r = await fetch("/api/cards", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload)});
       return r.json();
     },
     async updateCard(id, patch){
-      const r = await fetch(`/api/cards/${id}`, {
-        method: "PATCH",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(patch),
-      });
+      const r = await fetch(`/api/cards/${id}`, {method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify(patch)});
       return r.json();
     },
-    async deleteCard(id){
-      await fetch(`/api/cards/${id}`, {method: "DELETE"});
-    },
+    async deleteCard(id){ await fetch(`/api/cards/${id}`, {method:"DELETE"}); },
     async reorder(items){
-      await fetch("/api/cards/reorder", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(items),
-      });
+      await fetch("/api/cards/reorder", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(items)});
     },
     async uploadAttachments(cardId, files){
       const form = new FormData();
       files.forEach(f => form.append("files", f));
-      const r = await fetch(`/api/cards/${cardId}/attachments`, {
-        method: "POST",
-        body: form,
-      });
+      const r = await fetch(`/api/cards/${cardId}/attachments`, {method:"POST", body:form});
       return r.json();
     },
-    async deleteAttachment(id){
-      await fetch(`/api/attachments/${id}`, {method: "DELETE"});
-    },
+    async deleteAttachment(id){ await fetch(`/api/attachments/${id}`, {method:"DELETE"}); },
   };
 
   // ---------------- Helpers ----------------
   function deptInfo(key){ return DEPARTMENTS.find(d => d.key === key) || DEPARTMENTS[0]; }
   function statusInfo(key){ return STATUSES.find(s => s.key === key) || STATUSES[0]; }
+  function assigneeInfo(key){ return ASSIGNEES.find(a => a.key === key) || null; }
   function fmtDate(iso){
     const d = new Date(iso);
     return d.toLocaleString("th-TH", {day:"numeric", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit"});
@@ -390,10 +300,17 @@
     return (bytes/1024/1024).toFixed(1) + " MB";
   }
   function isImage(type){ return type && type.startsWith("image/"); }
+  function escapeHtml(s){
+    return (s || "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+  function normalizeUrl(u){
+    u = (u || "").trim();
+    if (!u) return "";
+    if (!/^https?:\/\//i.test(u)) return "https://" + u;
+    return u;
+  }
   function cardsForDept(key){
-    return cardsCache
-      .filter(c => c.department === key)
-      .sort((a,b) => a.position - b.position);
+    return cardsCache.filter(c => c.department === key).sort((a,b) => a.position - b.position);
   }
 
   // ---------------- Sidebar ----------------
@@ -407,8 +324,7 @@
       li.innerHTML = `
         <span class="mi-icon">${dep.icon}</span>
         <span class="mi-label">${dep.label}</span>
-        ${newCount ? `<span class="mi-new">${newCount}</span>` : ""}
-        <span class="mi-chev">〈</span>
+        ${newCount ? `<span class="mi-badge">${newCount}</span>` : ""}
       `;
       li.addEventListener("click", () => {
         currentDept = dep.key;
@@ -442,13 +358,12 @@
       const col = document.createElement("div");
       col.className = "column";
       col.dataset.status = st.key;
-
       const stCards = cards.filter(c => c.status === st.key);
 
       col.innerHTML = `
         <div class="column-head">
           <span class="col-dot" style="background:${st.color}"></span>
-          <span>${st.label}</span>
+          <span class="col-title">${st.label}</span>
           <span class="count">${stCards.length}</span>
         </div>
         <div class="card-list" data-status="${st.key}"></div>
@@ -460,7 +375,7 @@
 
       const trigger = document.createElement("div");
       trigger.className = "add-card-trigger";
-      trigger.innerHTML = "+ เพิ่มการ์ด";
+      trigger.textContent = "＋ เพิ่มการ์ด";
       trigger.addEventListener("click", () => showQuickAdd(col, st.key));
       col.appendChild(trigger);
 
@@ -476,31 +391,50 @@
 
     const st = statusInfo(card.status);
     const coverAtt = (card.attachments || []).find(a => isImage(a.type));
-    const coverHtml = coverAtt ? `<img class="cover" src="${coverAtt.url}">` : "";
+    const coverHtml = coverAtt ? `<div class="cover" style="background-image:url('${coverAtt.url}')"></div>` : "";
     const attCount = (card.attachments || []).length;
+    const asg = assigneeInfo(card.assignee);
+
+    const chips = [];
+    if (card.jira_url) chips.push(`<a class="chip jira" data-nodrag draggable="false">🔗 Jira</a>`);
+    if (attCount) chips.push(`<span class="chip att">📎 ${attCount}</span>`);
+
+    const assigneeHtml = asg
+      ? `<span class="assignee"><span class="av" style="background:${asg.color}">${escapeHtml(asg.label.charAt(0).toUpperCase())}</span>${escapeHtml(asg.label)}</span>`
+      : `<span class="assignee none">ยังไม่มอบหมาย</span>`;
 
     el.innerHTML = `
       <span class="status-stripe" style="background:${st.color}"></span>
       ${coverHtml}
-      <div class="title"></div>
-      <div class="meta-row">
-        ${attCount ? `<span>📎 ${attCount}</span>` : ""}
-        ${card.reporter ? `<span>👤 ${escapeHtml(card.reporter)}</span>` : ""}
-        <span>${fmtDate(card.created_at)}</span>
+      <div class="card-body">
+        ${chips.length ? `<div class="chips">${chips.join("")}</div>` : ""}
+        <div class="title"></div>
+        <div class="meta-row">
+          ${assigneeHtml}
+          <span class="date">${fmtDate(card.created_at)}</span>
+        </div>
       </div>
     `;
     el.querySelector(".title").textContent = card.title;
 
+    const jiraLink = el.querySelector(".chip.jira");
+    if (jiraLink) {
+      jiraLink.href = normalizeUrl(card.jira_url);
+      jiraLink.target = "_blank";
+      jiraLink.rel = "noopener";
+      jiraLink.addEventListener("click", (e) => e.stopPropagation());
+    }
+
     el.addEventListener("click", (e) => {
       if (dragState) return;
+      if (e.target.closest("[data-nodrag]")) return;
       openModal(card.id);
     });
-
     el.addEventListener("dragstart", (e) => {
       dragState = {id: card.id, fromStatus: card.status};
       el.classList.add("dragging");
       e.dataTransfer.effectAllowed = "move";
-      stopPolling();  // กัน poll มา rebuild ระหว่างลาก
+      stopPolling();
     });
     el.addEventListener("dragend", () => {
       el.classList.remove("dragging");
@@ -510,10 +444,6 @@
     });
 
     return el;
-  }
-
-  function escapeHtml(s){
-    return (s || "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   }
 
   function setupColumnDnD(listEl, statusKey){
@@ -562,21 +492,18 @@
       items.push({id, status: newStatus, position: idx});
     });
 
-    // อัปเดตเฉพาะจุดที่เปลี่ยน (ไม่ rebuild ทั้งบอร์ด → ไม่กระพริบ)
     if (dragEl) {
       const stripe = dragEl.querySelector(".status-stripe");
       if (stripe) stripe.style.background = statusInfo(newStatus).color;
       dragEl.classList.remove("just-moved");
-      void dragEl.offsetWidth;              // reflow เพื่อให้ animation เล่นใหม่
+      void dragEl.offsetWidth;
       dragEl.classList.add("just-moved");
       setTimeout(() => dragEl.classList.remove("just-moved"), 260);
     }
     refreshCounts();
-
-    try { await api.reorder(items); } catch (e) { /* ครั้งถัดไป poll จะ sync ให้ */ }
+    try { await api.reorder(items); } catch (e) { /* poll ครั้งถัดไป sync ให้ */ }
   }
 
-  // อัปเดตตัวเลขนับ (หัวคอลัมน์ + badge เมนู) โดยไม่แตะการ์ด
   function refreshCounts(){
     document.querySelectorAll(".column").forEach(col => {
       const n = col.querySelectorAll(".card-list .issue-card").length;
@@ -633,6 +560,9 @@
   const overlay = document.getElementById("overlay");
   const fieldDeptSel = document.getElementById("fieldDept");
   const fieldStatusSel = document.getElementById("fieldStatus");
+  const fieldAssigneeSel = document.getElementById("fieldAssignee");
+  const fieldJira = document.getElementById("fieldJira");
+  const jiraOpen = document.getElementById("jiraOpen");
 
   DEPARTMENTS.forEach(d => {
     const o = document.createElement("option");
@@ -644,6 +574,15 @@
     o.value = s.key; o.textContent = s.label;
     fieldStatusSel.appendChild(o);
   });
+  // ผู้รับผิดชอบ: ไม่ระบุ + รายชื่อ
+  const noneOpt = document.createElement("option");
+  noneOpt.value = ""; noneOpt.textContent = "— ยังไม่มอบหมาย —";
+  fieldAssigneeSel.appendChild(noneOpt);
+  ASSIGNEES.forEach(a => {
+    const o = document.createElement("option");
+    o.value = a.key; o.textContent = a.label;
+    fieldAssigneeSel.appendChild(o);
+  });
 
   function openModal(cardId){
     currentCardId = cardId;
@@ -653,8 +592,11 @@
     document.getElementById("fieldTitle").value = card.title;
     fieldDeptSel.value = card.department;
     fieldStatusSel.value = card.status;
+    fieldAssigneeSel.value = card.assignee || "";
     document.getElementById("fieldReporter").value = card.reporter || "";
     document.getElementById("fieldDesc").value = card.description || "";
+    fieldJira.value = card.jira_url || "";
+    updateJiraOpen();
     document.getElementById("metaLine").textContent =
       `สร้างเมื่อ ${fmtDate(card.created_at)} · แก้ไขล่าสุด ${fmtDate(card.updated_at)}`;
 
@@ -668,31 +610,27 @@
     stopPolling();
   }
 
-  // ---------------- Modal save state ----------------
   const saveBtn = document.getElementById("saveCardBtn");
   const saveHint = document.getElementById("saveHint");
 
   function setDirty(dirty){
     modalDirty = dirty;
     saveBtn.disabled = !dirty;
-    if (dirty) {
-      saveHint.textContent = "มีการแก้ไขที่ยังไม่บันทึก";
-      saveHint.className = "save-hint unsaved";
-    } else {
-      saveHint.textContent = "";
-      saveHint.className = "save-hint";
-    }
+    if (dirty) { saveHint.textContent = "มีการแก้ไขที่ยังไม่บันทึก"; saveHint.className = "save-hint unsaved"; }
+    else { saveHint.textContent = ""; saveHint.className = "save-hint"; }
+  }
+
+  function updateJiraOpen(){
+    const v = fieldJira.value.trim();
+    if (v) { jiraOpen.href = normalizeUrl(v); jiraOpen.style.display = "inline-flex"; }
+    else { jiraOpen.style.display = "none"; jiraOpen.removeAttribute("href"); }
   }
 
   function renderCover(card){
     const coverAtt = (card.attachments || []).find(a => isImage(a.type));
     const img = document.getElementById("modalCover");
-    if (coverAtt) {
-      img.src = coverAtt.url;
-      img.style.display = "block";
-    } else {
-      img.style.display = "none";
-    }
+    if (coverAtt) { img.src = coverAtt.url; img.style.display = "block"; }
+    else { img.style.display = "none"; }
   }
 
   function renderAttachments(card){
@@ -701,28 +639,17 @@
     (card.attachments || []).forEach(att => {
       const tile = document.createElement("a");
       tile.className = "attach-tile";
-      tile.href = att.url;
-      tile.target = "_blank";
-      tile.rel = "noopener";
+      tile.href = att.url; tile.target = "_blank"; tile.rel = "noopener";
       if (!isImage(att.type)) tile.download = att.name;
-
-      tile.innerHTML = isImage(att.type)
-        ? `<img src="${att.url}">`
-        : `<div class="file-icon">📄</div>`;
-      tile.innerHTML += `
-        <div class="fname">${escapeHtml(att.name)}</div>
-        <div class="fsize">${fmtSize(att.size)}</div>
-      `;
+      tile.innerHTML = isImage(att.type) ? `<img src="${att.url}">` : `<div class="file-icon">📄</div>`;
+      tile.innerHTML += `<div class="fname">${escapeHtml(att.name)}</div><div class="fsize">${fmtSize(att.size)}</div>`;
       const rm = document.createElement("button");
-      rm.className = "attach-remove";
-      rm.textContent = "✕";
+      rm.className = "attach-remove"; rm.textContent = "✕";
       rm.addEventListener("click", async (e) => {
         e.preventDefault(); e.stopPropagation();
         await api.deleteAttachment(att.id);
         card.attachments = card.attachments.filter(a => a.id !== att.id);
-        renderAttachments(card);
-        renderCover(card);
-        renderAll(false);
+        renderAttachments(card); renderCover(card); renderAll(false);
       });
       tile.appendChild(rm);
       grid.appendChild(tile);
@@ -732,8 +659,7 @@
   function closeModal(){
     if (modalDirty && !confirm("มีการแก้ไขที่ยังไม่บันทึก ต้องการปิดโดยไม่บันทึกใช่หรือไม่?")) return;
     overlay.classList.remove("open");
-    currentCardId = null;
-    modalOriginal = null;
+    currentCardId = null; modalOriginal = null;
     setDirty(false);
     startPolling();
   }
@@ -741,14 +667,14 @@
   overlay.addEventListener("mousedown", (e) => { if (e.target === overlay) closeModal(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && overlay.classList.contains("open")) closeModal(); });
 
-  // แก้ฟิลด์ = แค่ทำเครื่องหมายว่ามีการแก้ไข (ยังไม่บันทึกจนกว่าจะกดปุ่ม)
   ["fieldTitle", "fieldReporter", "fieldDesc"].forEach(id => {
     document.getElementById(id).addEventListener("input", () => setDirty(true));
   });
+  fieldJira.addEventListener("input", () => { setDirty(true); updateJiraOpen(); });
   fieldDeptSel.addEventListener("change", () => setDirty(true));
   fieldStatusSel.addEventListener("change", () => setDirty(true));
+  fieldAssigneeSel.addEventListener("change", () => setDirty(true));
 
-  // กดปุ่มบันทึก → ส่งค่าทั้งหมดขึ้นเซิร์ฟเวอร์
   saveBtn.addEventListener("click", async () => {
     if (!currentCardId) return;
     const idx = cardsCache.findIndex(c => c.id === currentCardId);
@@ -764,8 +690,9 @@
       reporter: document.getElementById("fieldReporter").value,
       department: fieldDeptSel.value,
       status: fieldStatusSel.value,
+      assignee: fieldAssigneeSel.value,
+      jira_url: fieldJira.value.trim(),
     };
-    // ถ้าย้ายเมนู/สถานะ ให้ไปต่อท้ายคอลัมน์ใหม่
     if (modalOriginal &&
         (patch.department !== modalOriginal.department || patch.status !== modalOriginal.status)) {
       patch.position = 999999;
@@ -781,8 +708,7 @@
         `สร้างเมื่อ ${fmtDate(cardsCache[idx].created_at)} · แก้ไขล่าสุด ${fmtDate(cardsCache[idx].updated_at)}`;
       renderAll(false);
       setDirty(false);
-      saveHint.textContent = "บันทึกแล้ว ✓";
-      saveHint.className = "save-hint saved";
+      saveHint.textContent = "บันทึกแล้ว ✓"; saveHint.className = "save-hint saved";
       setTimeout(() => { if (!modalDirty) saveHint.textContent = ""; }, 2000);
     } catch (e) {
       setDirty(true);
@@ -803,9 +729,7 @@
     if (!card) return;
     const newAttachments = await api.uploadAttachments(currentCardId, files);
     card.attachments = (card.attachments || []).concat(newAttachments);
-    renderAttachments(card);
-    renderCover(card);
-    renderAll(false);
+    renderAttachments(card); renderCover(card); renderAll(false);
   });
 
   document.getElementById("deleteCardBtn").addEventListener("click", async () => {
@@ -813,12 +737,13 @@
     if (!confirm("ลบการ์ดนี้ใช่หรือไม่? การลบไม่สามารถย้อนกลับได้")) return;
     await api.deleteCard(currentCardId);
     cardsCache = cardsCache.filter(c => c.id !== currentCardId);
+    modalDirty = false;
     closeModal();
     renderAll();
   });
 
   // ---------------- Master render ----------------
-  function renderAll(reloadSidebar = true){
+  function renderAll(){
     renderSidebar();
     renderBoard();
   }
@@ -832,13 +757,10 @@
         if (!r.ok) return;
         cardsCache = await r.json();
         renderAll();
-      } catch (err) { /* server unreachable, retry on next tick */ }
+      } catch (err) { /* retry next tick */ }
     }, 5000);
   }
-  function stopPolling(){
-    clearInterval(pollTimer);
-    pollTimer = null;
-  }
+  function stopPolling(){ clearInterval(pollTimer); pollTimer = null; }
 
   // ---------------- Init ----------------
   (async function init(){

@@ -51,6 +51,17 @@ def _blob(data: bytes):
     return psycopg2.Binary(data) if IS_PG else data
 
 
+def _ensure_column(cur, table, col, coldef):
+    """เพิ่มคอลัมน์ถ้ายังไม่มี (migration รองรับ DB ที่สร้างไว้แล้ว)"""
+    if IS_PG:
+        cur.execute(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col} {coldef}")
+    else:
+        cur.execute(f"PRAGMA table_info({table})")
+        existing = [r["name"] for r in cur.fetchall()]
+        if col not in existing:
+            cur.execute(f"ALTER TABLE {table} ADD COLUMN {col} {coldef}")
+
+
 def init_db():
     conn = get_conn()
     cur = _cursor(conn)
@@ -106,6 +117,9 @@ def init_db():
             );
             """
         )
+    # migration: ฟิลด์ที่เพิ่มทีหลัง
+    _ensure_column(cur, "cards", "assignee", "TEXT DEFAULT ''")
+    _ensure_column(cur, "cards", "jira_url", "TEXT DEFAULT ''")
     conn.commit()
     conn.close()
 
@@ -128,6 +142,8 @@ class CardUpdate(BaseModel):
     department: Optional[str] = None
     status: Optional[str] = None
     position: Optional[float] = None
+    assignee: Optional[str] = None
+    jira_url: Optional[str] = None
 
 
 class ReorderItem(BaseModel):
@@ -235,7 +251,7 @@ def update_card(card_id: int, patch: CardUpdate):
     cur.execute(
         _q(
             """UPDATE cards SET title=?, description=?, reporter=?, department=?,
-               status=?, position=?, updated_at=? WHERE id=?"""
+               status=?, position=?, assignee=?, jira_url=?, updated_at=? WHERE id=?"""
         ),
         (
             merged["title"],
@@ -244,6 +260,8 @@ def update_card(card_id: int, patch: CardUpdate):
             merged["department"],
             merged["status"],
             merged["position"],
+            merged.get("assignee", ""),
+            merged.get("jira_url", ""),
             merged["updated_at"],
             card_id,
         ),
