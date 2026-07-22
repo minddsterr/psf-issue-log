@@ -66,10 +66,10 @@
   .col-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
   .column-head .col-title{font-weight:800;font-size:14.5px;flex:1;}
   .column-head .count{background:#fff;color:var(--muted);font-size:12px;font-weight:800;min-width:24px;height:22px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 8px;box-shadow:var(--shadow-sm);}
-  .card-list{padding:0 12px;display:flex;flex-direction:column;gap:11px;overflow-y:auto;min-height:12px;transition:background .15s ease;}
+  .card-list{padding:0 12px;display:flex;flex-direction:column;gap:11px;overflow-y:auto;flex:1 1 auto;min-height:44px;transition:background .15s ease;}
   .card-list.drag-over{background:#dbe2ec;border-radius:12px;}
 
-  .issue-card{background:var(--panel);border-radius:13px;box-shadow:var(--shadow-sm);padding:0;overflow:hidden;cursor:grab;border:1px solid rgba(20,30,55,.04);position:relative;transition:box-shadow .15s,transform .15s;}
+  .issue-card{background:var(--panel);border-radius:13px;box-shadow:var(--shadow-sm);padding:0;overflow:hidden;cursor:grab;border:1px solid rgba(20,30,55,.04);position:relative;flex-shrink:0;transition:box-shadow .15s,transform .15s;}
   .issue-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);}
   .issue-card:active{cursor:grabbing;}
   .issue-card.dragging{opacity:.4;box-shadow:none;transform:scale(.98);}
