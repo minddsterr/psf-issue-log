@@ -120,13 +120,21 @@
   .card-list{
     flex:1;overflow-y:auto;padding:2px 10px;display:flex;flex-direction:column;gap:8px;min-height:40px;
   }
+  .card-list{transition:background .15s ease;}
   .card-list.drag-over{background:#dce3ea;border-radius:8px;}
   .issue-card{
     background:var(--card-bg);border-radius:8px;box-shadow:var(--shadow);
-    padding:10px 10px 9px;cursor:pointer;position:relative;
+    padding:10px 10px 9px;cursor:grab;position:relative;
+    transition:box-shadow .14s ease, transform .14s ease;
   }
-  .issue-card:hover{background:#f9fafc;}
-  .issue-card.dragging{opacity:.35;}
+  .issue-card:hover{background:#f9fafc;box-shadow:0 2px 6px rgba(9,30,66,.2);}
+  .issue-card:active{cursor:grabbing;}
+  .issue-card.dragging{opacity:.4;box-shadow:none;transform:scale(.98);}
+  @keyframes cardSettle{
+    0%{transform:scale(1.05);box-shadow:0 10px 22px rgba(9,30,66,.30);}
+    100%{transform:scale(1);box-shadow:var(--shadow);}
+  }
+  .issue-card.just-moved{animation:cardSettle .24s ease;}
   .issue-card .cover{
     width:calc(100% + 20px);margin:-10px -10px 8px;border-radius:8px 8px 0 0;
     max-height:120px;object-fit:cover;display:block;
@@ -213,7 +221,12 @@
     width:20px;height:20px;border-radius:50%;cursor:pointer;font-size:12px;line-height:1;
   }
   .attach-remove:hover{background:rgba(0,0,0,.8);}
-  .modal-footer{display:flex;justify-content:space-between;align-items:center;margin-top:6px;}
+  .modal-footer{display:flex;justify-content:space-between;align-items:center;margin-top:6px;gap:12px;}
+  .save-area{display:flex;align-items:center;gap:12px;}
+  .save-hint{font-size:13px;font-weight:600;white-space:nowrap;}
+  .save-hint.unsaved{color:#e67700;}
+  .save-hint.saved{color:var(--done);}
+  #saveCardBtn:disabled{opacity:.45;cursor:default;}
 
   .empty-state{
     padding:60px 20px;text-align:center;color:var(--text-light);font-size:14px;width:100%;
@@ -278,6 +291,10 @@
 
       <div class="modal-footer">
         <button class="btn btn-danger" id="deleteCardBtn">ลบการ์ดนี้</button>
+        <div class="save-area">
+          <span class="save-hint" id="saveHint"></span>
+          <button class="btn btn-primary" id="saveCardBtn" disabled>บันทึก</button>
+        </div>
       </div>
     </div>
   </div>
@@ -311,6 +328,8 @@
   let cardsCache = [];      // all cards, all departments (loaded once)
   let dragState = null;
   let pollTimer = null;
+  let modalDirty = false;   // มีการแก้ไขในการ์ดที่ยังไม่บันทึก
+  let modalOriginal = null; // ค่าเดิมตอนเปิดการ์ด (ไว้เทียบว่าเปลี่ยนคอลัมน์ไหม)
 
   // ---------------- API ----------------
   const api = {
@@ -481,10 +500,13 @@
       dragState = {id: card.id, fromStatus: card.status};
       el.classList.add("dragging");
       e.dataTransfer.effectAllowed = "move";
+      stopPolling();  // กัน poll มา rebuild ระหว่างลาก
     });
     el.addEventListener("dragend", () => {
       el.classList.remove("dragging");
       dragState = null;
+      document.querySelectorAll(".card-list.drag-over").forEach(l => l.classList.remove("drag-over"));
+      startPolling();
     });
 
     return el;
@@ -527,6 +549,9 @@
   }
 
   async function commitReorder(listEl, newStatus){
+    const movedId = dragState ? dragState.id : null;
+    const dragEl = movedId ? document.querySelector(`.issue-card[data-id="${movedId}"]`) : null;
+
     const ids = [...listEl.querySelectorAll(".issue-card")].map(el => Number(el.dataset.id));
     const items = [];
     ids.forEach((id, idx) => {
@@ -536,8 +561,29 @@
       card.status = newStatus;
       items.push({id, status: newStatus, position: idx});
     });
-    await api.reorder(items);
-    renderAll(false);
+
+    // อัปเดตเฉพาะจุดที่เปลี่ยน (ไม่ rebuild ทั้งบอร์ด → ไม่กระพริบ)
+    if (dragEl) {
+      const stripe = dragEl.querySelector(".status-stripe");
+      if (stripe) stripe.style.background = statusInfo(newStatus).color;
+      dragEl.classList.remove("just-moved");
+      void dragEl.offsetWidth;              // reflow เพื่อให้ animation เล่นใหม่
+      dragEl.classList.add("just-moved");
+      setTimeout(() => dragEl.classList.remove("just-moved"), 260);
+    }
+    refreshCounts();
+
+    try { await api.reorder(items); } catch (e) { /* ครั้งถัดไป poll จะ sync ให้ */ }
+  }
+
+  // อัปเดตตัวเลขนับ (หัวคอลัมน์ + badge เมนู) โดยไม่แตะการ์ด
+  function refreshCounts(){
+    document.querySelectorAll(".column").forEach(col => {
+      const n = col.querySelectorAll(".card-list .issue-card").length;
+      const countEl = col.querySelector(".column-head .count");
+      if (countEl) countEl.textContent = n;
+    });
+    renderSidebar();
   }
 
   // ---------------- Quick add ----------------
@@ -615,8 +661,27 @@
     renderAttachments(card);
     renderCover(card);
 
+    modalOriginal = {department: card.department, status: card.status};
+    setDirty(false);
+
     overlay.classList.add("open");
     stopPolling();
+  }
+
+  // ---------------- Modal save state ----------------
+  const saveBtn = document.getElementById("saveCardBtn");
+  const saveHint = document.getElementById("saveHint");
+
+  function setDirty(dirty){
+    modalDirty = dirty;
+    saveBtn.disabled = !dirty;
+    if (dirty) {
+      saveHint.textContent = "มีการแก้ไขที่ยังไม่บันทึก";
+      saveHint.className = "save-hint unsaved";
+    } else {
+      saveHint.textContent = "";
+      saveHint.className = "save-hint";
+    }
   }
 
   function renderCover(card){
@@ -665,39 +730,66 @@
   }
 
   function closeModal(){
+    if (modalDirty && !confirm("มีการแก้ไขที่ยังไม่บันทึก ต้องการปิดโดยไม่บันทึกใช่หรือไม่?")) return;
     overlay.classList.remove("open");
     currentCardId = null;
+    modalOriginal = null;
+    setDirty(false);
     startPolling();
   }
   document.getElementById("modalClose").addEventListener("click", closeModal);
   overlay.addEventListener("mousedown", (e) => { if (e.target === overlay) closeModal(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && overlay.classList.contains("open")) closeModal(); });
 
-  async function saveCurrentCard(patch){
+  // แก้ฟิลด์ = แค่ทำเครื่องหมายว่ามีการแก้ไข (ยังไม่บันทึกจนกว่าจะกดปุ่ม)
+  ["fieldTitle", "fieldReporter", "fieldDesc"].forEach(id => {
+    document.getElementById(id).addEventListener("input", () => setDirty(true));
+  });
+  fieldDeptSel.addEventListener("change", () => setDirty(true));
+  fieldStatusSel.addEventListener("change", () => setDirty(true));
+
+  // กดปุ่มบันทึก → ส่งค่าทั้งหมดขึ้นเซิร์ฟเวอร์
+  saveBtn.addEventListener("click", async () => {
+    if (!currentCardId) return;
     const idx = cardsCache.findIndex(c => c.id === currentCardId);
     if (idx === -1) return;
-    const updated = await api.updateCard(currentCardId, patch);
-    cardsCache[idx] = {...cardsCache[idx], ...updated};
-    document.getElementById("metaLine").textContent =
-      `สร้างเมื่อ ${fmtDate(cardsCache[idx].created_at)} · แก้ไขล่าสุด ${fmtDate(cardsCache[idx].updated_at)}`;
-  }
 
-  document.getElementById("fieldTitle").addEventListener("blur", (e) => {
-    const v = e.target.value.trim() || "ไม่มีชื่อ";
-    e.target.value = v;
-    saveCurrentCard({title: v}).then(() => renderAll(false));
-  });
-  document.getElementById("fieldDesc").addEventListener("blur", (e) => {
-    saveCurrentCard({description: e.target.value});
-  });
-  document.getElementById("fieldReporter").addEventListener("blur", (e) => {
-    saveCurrentCard({reporter: e.target.value}).then(() => renderAll(false));
-  });
-  fieldDeptSel.addEventListener("change", (e) => {
-    saveCurrentCard({department: e.target.value, position: 999999}).then(() => renderAll(false));
-  });
-  fieldStatusSel.addEventListener("change", (e) => {
-    saveCurrentCard({status: e.target.value, position: 999999}).then(() => renderAll(false));
+    const titleEl = document.getElementById("fieldTitle");
+    const title = titleEl.value.trim() || "ไม่มีชื่อ";
+    titleEl.value = title;
+
+    const patch = {
+      title,
+      description: document.getElementById("fieldDesc").value,
+      reporter: document.getElementById("fieldReporter").value,
+      department: fieldDeptSel.value,
+      status: fieldStatusSel.value,
+    };
+    // ถ้าย้ายเมนู/สถานะ ให้ไปต่อท้ายคอลัมน์ใหม่
+    if (modalOriginal &&
+        (patch.department !== modalOriginal.department || patch.status !== modalOriginal.status)) {
+      patch.position = 999999;
+    }
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = "กำลังบันทึก...";
+    try {
+      const updated = await api.updateCard(currentCardId, patch);
+      cardsCache[idx] = {...cardsCache[idx], ...updated};
+      modalOriginal = {department: updated.department, status: updated.status};
+      document.getElementById("metaLine").textContent =
+        `สร้างเมื่อ ${fmtDate(cardsCache[idx].created_at)} · แก้ไขล่าสุด ${fmtDate(cardsCache[idx].updated_at)}`;
+      renderAll(false);
+      setDirty(false);
+      saveHint.textContent = "บันทึกแล้ว ✓";
+      saveHint.className = "save-hint saved";
+      setTimeout(() => { if (!modalDirty) saveHint.textContent = ""; }, 2000);
+    } catch (e) {
+      setDirty(true);
+      alert("บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง");
+    } finally {
+      saveBtn.textContent = "บันทึก";
+    }
   });
 
   document.getElementById("addAttachBtn").addEventListener("click", () => {
