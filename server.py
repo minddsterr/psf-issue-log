@@ -350,6 +350,22 @@ def get_file(att_id: str):
     )
 
 
+# ---------------- Health check ----------------
+
+@app.get("/api/health")
+def health():
+    backend = "postgres" if IS_PG else "sqlite"
+    try:
+        conn = get_conn()
+        cur = _cursor(conn)
+        cur.execute("SELECT COUNT(*) as n FROM cards")
+        n = cur.fetchone()["n"]
+        conn.close()
+        return {"backend": backend, "cards": n, "ok": True}
+    except Exception as e:
+        return {"backend": backend, "ok": False, "error": str(e)}
+
+
 # ---------------- Frontend ----------------
 
 @app.get("/")
