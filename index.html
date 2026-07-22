@@ -148,7 +148,7 @@
   }
   .modal.viewing .field select{pointer-events:none;background-image:none;}
   .modal.viewing .section textarea{resize:none;}
-  .modal.viewing .modal-footer{display:none;}
+  .modal.viewing .save-area{display:none;}   /* โหมดดู: ซ่อนปุ่มบันทึก/ยกเลิก แต่ยังลบได้ */
   .modal.viewing #fieldJira{display:none;}
   .modal:not(.viewing) .jira-link{display:none;}
   .modal:not(.viewing) #editBtn{display:none;}
@@ -622,15 +622,26 @@
       if (e.key === "Escape") cancel();
     });
 
+    let saving = false;
     async function save(){
+      if (saving) return;                        // กันคลิก/กด Enter ซ้ำระหว่างรอเซิร์ฟเวอร์
       const title = ta.value.trim();
       if (!title) { cancel(); return; }
-      const card = await api.createCard({department: currentDept, status: statusKey, title});
-      cardsCache.push(card);
-      box.remove();
-      trigger.style.display = "flex";
-      startPolling();
-      renderAll(false);
+      saving = true;
+      const btn = box.querySelector("#qaSave");
+      btn.disabled = true; btn.textContent = "กำลังเพิ่ม...";
+      try {
+        const card = await api.createCard({department: currentDept, status: statusKey, title});
+        cardsCache.push(card);
+        box.remove();
+        trigger.style.display = "flex";
+        startPolling();
+        renderAll(false);
+      } catch (e) {
+        saving = false;
+        btn.disabled = false; btn.textContent = "เพิ่มการ์ด";
+        alert("เพิ่มการ์ดไม่สำเร็จ ลองใหม่อีกครั้ง");
+      }
     }
   }
 
