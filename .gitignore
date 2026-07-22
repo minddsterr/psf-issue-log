@@ -5,3 +5,4 @@ __pycache__/
 google_client_id.txt
 allowed_emails.txt
 .DS_Store
+data_backup_*/

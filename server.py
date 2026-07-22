@@ -1,56 +1,111 @@
 import os
 import sqlite3
 import uuid
-import shutil
 from datetime import datetime
 from typing import Optional, List
 
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Response
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# รองรับการตั้งที่เก็บข้อมูลผ่าน env (ใช้ตอน deploy ที่มี persistent disk)
 DATA_DIR = os.environ.get("DATA_DIR", os.path.join(BASE_DIR, "data"))
-UPLOAD_DIR = os.path.join(DATA_DIR, "uploads")
+os.makedirs(DATA_DIR, exist_ok=True)
 DB_PATH = os.path.join(DATA_DIR, "issues.db")
 
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+# ถ้ามี DATABASE_URL (เช่นจาก Supabase) → ใช้ Postgres (เก็บถาวรบน cloud)
+# ถ้าไม่มี → ใช้ SQLite ไฟล์ในเครื่อง (สำหรับรัน/เทสในเครื่อง)
+DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
+IS_PG = DATABASE_URL.startswith("postgres")
+
+MAX_FILE_MB = 10  # จำกัดขนาดไฟล์แนบต่อไฟล์
+
+if IS_PG:
+    import psycopg2
+    import psycopg2.extras
 
 
 def get_conn():
+    if IS_PG:
+        conn = psycopg2.connect(DATABASE_URL, sslmode="require")
+        return conn
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 
+def _cursor(conn):
+    if IS_PG:
+        return conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    return conn.cursor()
+
+
+def _q(sql):
+    """แปลง placeholder ? → %s สำหรับ Postgres"""
+    return sql.replace("?", "%s") if IS_PG else sql
+
+
+def _blob(data: bytes):
+    """ห่อ bytes ให้เหมาะกับ backend"""
+    return psycopg2.Binary(data) if IS_PG else data
+
+
 def init_db():
     conn = get_conn()
-    conn.executescript(
-        """
-        CREATE TABLE IF NOT EXISTS cards (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            department TEXT NOT NULL,
-            status TEXT NOT NULL,
-            title TEXT NOT NULL,
-            description TEXT DEFAULT '',
-            reporter TEXT DEFAULT '',
-            position REAL NOT NULL,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        );
-
-        CREATE TABLE IF NOT EXISTS attachments (
-            id TEXT PRIMARY KEY,
-            card_id INTEGER NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
-            filename TEXT NOT NULL,
-            content_type TEXT,
-            size INTEGER,
-            stored_name TEXT NOT NULL
-        );
-        """
-    )
+    cur = _cursor(conn)
+    if IS_PG:
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS cards (
+                id SERIAL PRIMARY KEY,
+                department TEXT NOT NULL,
+                status TEXT NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT DEFAULT '',
+                reporter TEXT DEFAULT '',
+                position DOUBLE PRECISION NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            """
+        )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS attachments (
+                id TEXT PRIMARY KEY,
+                card_id INTEGER NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
+                filename TEXT NOT NULL,
+                content_type TEXT,
+                size INTEGER,
+                data BYTEA NOT NULL
+            );
+            """
+        )
+    else:
+        cur.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS cards (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                department TEXT NOT NULL,
+                status TEXT NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT DEFAULT '',
+                reporter TEXT DEFAULT '',
+                position REAL NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS attachments (
+                id TEXT PRIMARY KEY,
+                card_id INTEGER NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
+                filename TEXT NOT NULL,
+                content_type TEXT,
+                size INTEGER,
+                data BLOB NOT NULL
+            );
+            """
+        )
     conn.commit()
     conn.close()
 
@@ -85,38 +140,28 @@ def now_iso():
     return datetime.utcnow().isoformat() + "Z"
 
 
-def attachments_for(conn, card_id):
-    rows = conn.execute(
-        "SELECT * FROM attachments WHERE card_id = ?", (card_id,)
-    ).fetchall()
+def attachments_for(cur, card_id):
+    cur.execute(
+        _q("SELECT id, filename, content_type, size FROM attachments WHERE card_id = ?"),
+        (card_id,),
+    )
+    rows = cur.fetchall()
     return [
         {
             "id": r["id"],
             "name": r["filename"],
             "type": r["content_type"],
             "size": r["size"],
-            "url": f"/uploads/{r['stored_name']}",
+            "url": f"/files/{r['id']}",
         }
         for r in rows
     ]
 
 
-def card_to_dict(conn, row):
+def card_to_dict(cur, row):
     d = dict(row)
-    d["attachments"] = attachments_for(conn, row["id"])
+    d["attachments"] = attachments_for(cur, row["id"])
     return d
-
-
-# ---------------- Uploads ----------------
-
-@app.get("/uploads/{name}")
-def get_upload(name: str):
-    if "/" in name or "\\" in name or ".." in name:
-        raise HTTPException(400, "ชื่อไฟล์ไม่ถูกต้อง")
-    path = os.path.join(UPLOAD_DIR, name)
-    if not os.path.exists(path):
-        raise HTTPException(404, "ไม่พบไฟล์")
-    return FileResponse(path)
 
 
 # ---------------- Cards ----------------
@@ -124,8 +169,10 @@ def get_upload(name: str):
 @app.get("/api/cards")
 def list_cards():
     conn = get_conn()
-    rows = conn.execute("SELECT * FROM cards ORDER BY position ASC").fetchall()
-    result = [card_to_dict(conn, r) for r in rows]
+    cur = _cursor(conn)
+    cur.execute("SELECT * FROM cards ORDER BY position ASC")
+    rows = cur.fetchall()
+    result = [card_to_dict(cur, r) for r in rows]
     conn.close()
     return result
 
@@ -133,20 +180,37 @@ def list_cards():
 @app.post("/api/cards")
 def create_card(card: CardCreate):
     conn = get_conn()
-    max_pos = conn.execute(
-        "SELECT MAX(position) as m FROM cards WHERE department = ? AND status = ?",
+    cur = _cursor(conn)
+    cur.execute(
+        _q("SELECT MAX(position) as m FROM cards WHERE department = ? AND status = ?"),
         (card.department, card.status),
-    ).fetchone()["m"]
+    )
+    max_pos = cur.fetchone()["m"]
     position = (max_pos or 0) + 1024
     now = now_iso()
-    cur = conn.execute(
-        """INSERT INTO cards (department, status, title, description, reporter, position, created_at, updated_at)
-           VALUES (?, ?, ?, '', '', ?, ?, ?)""",
-        (card.department, card.status, card.title.strip(), position, now, now),
-    )
+
+    if IS_PG:
+        cur.execute(
+            _q(
+                """INSERT INTO cards (department, status, title, description, reporter, position, created_at, updated_at)
+                   VALUES (?, ?, ?, '', '', ?, ?, ?) RETURNING id"""
+            ),
+            (card.department, card.status, card.title.strip(), position, now, now),
+        )
+        new_id = cur.fetchone()["id"]
+    else:
+        cur.execute(
+            _q(
+                """INSERT INTO cards (department, status, title, description, reporter, position, created_at, updated_at)
+                   VALUES (?, ?, ?, '', '', ?, ?, ?)"""
+            ),
+            (card.department, card.status, card.title.strip(), position, now, now),
+        )
+        new_id = cur.lastrowid
+
     conn.commit()
-    row = conn.execute("SELECT * FROM cards WHERE id = ?", (cur.lastrowid,)).fetchone()
-    result = card_to_dict(conn, row)
+    cur.execute(_q("SELECT * FROM cards WHERE id = ?"), (new_id,))
+    result = card_to_dict(cur, cur.fetchone())
     conn.close()
     return result
 
@@ -154,21 +218,25 @@ def create_card(card: CardCreate):
 @app.patch("/api/cards/{card_id}")
 def update_card(card_id: int, patch: CardUpdate):
     conn = get_conn()
-    row = conn.execute("SELECT * FROM cards WHERE id = ?", (card_id,)).fetchone()
+    cur = _cursor(conn)
+    cur.execute(_q("SELECT * FROM cards WHERE id = ?"), (card_id,))
+    row = cur.fetchone()
     if not row:
         conn.close()
         raise HTTPException(404, "not found")
 
     fields = patch.dict(exclude_unset=True)
     if "title" in fields:
-        fields["title"] = fields["title"].strip() or row["title"]
+        fields["title"] = (fields["title"] or "").strip() or row["title"]
     merged = dict(row)
     merged.update(fields)
     merged["updated_at"] = now_iso()
 
-    conn.execute(
-        """UPDATE cards SET title=?, description=?, reporter=?, department=?,
-           status=?, position=?, updated_at=? WHERE id=?""",
+    cur.execute(
+        _q(
+            """UPDATE cards SET title=?, description=?, reporter=?, department=?,
+               status=?, position=?, updated_at=? WHERE id=?"""
+        ),
         (
             merged["title"],
             merged["description"],
@@ -181,8 +249,8 @@ def update_card(card_id: int, patch: CardUpdate):
         ),
     )
     conn.commit()
-    row = conn.execute("SELECT * FROM cards WHERE id = ?", (card_id,)).fetchone()
-    result = card_to_dict(conn, row)
+    cur.execute(_q("SELECT * FROM cards WHERE id = ?"), (card_id,))
+    result = card_to_dict(cur, cur.fetchone())
     conn.close()
     return result
 
@@ -190,10 +258,11 @@ def update_card(card_id: int, patch: CardUpdate):
 @app.post("/api/cards/reorder")
 def reorder_cards(items: List[ReorderItem]):
     conn = get_conn()
+    cur = _cursor(conn)
     now = now_iso()
     for item in items:
-        conn.execute(
-            "UPDATE cards SET status = ?, position = ?, updated_at = ? WHERE id = ?",
+        cur.execute(
+            _q("UPDATE cards SET status = ?, position = ?, updated_at = ? WHERE id = ?"),
             (item.status, item.position, now, item.id),
         )
     conn.commit()
@@ -204,53 +273,48 @@ def reorder_cards(items: List[ReorderItem]):
 @app.delete("/api/cards/{card_id}")
 def delete_card(card_id: int):
     conn = get_conn()
-    atts = conn.execute(
-        "SELECT stored_name FROM attachments WHERE card_id = ?", (card_id,)
-    ).fetchall()
-    for a in atts:
-        path = os.path.join(UPLOAD_DIR, a["stored_name"])
-        if os.path.exists(path):
-            os.remove(path)
-    conn.execute("DELETE FROM cards WHERE id = ?", (card_id,))
+    cur = _cursor(conn)
+    cur.execute(_q("DELETE FROM cards WHERE id = ?"), (card_id,))
     conn.commit()
     conn.close()
     return JSONResponse(status_code=204, content=None)
 
 
-# ---------------- Attachments ----------------
+# ---------------- Attachments (เก็บไฟล์ในฐานข้อมูล) ----------------
 
 @app.post("/api/cards/{card_id}/attachments")
-def upload_attachments(card_id: int, files: List[UploadFile] = File(...)):
+async def upload_attachments(card_id: int, files: List[UploadFile] = File(...)):
     conn = get_conn()
-    row = conn.execute("SELECT id FROM cards WHERE id = ?", (card_id,)).fetchone()
-    if not row:
+    cur = _cursor(conn)
+    cur.execute(_q("SELECT id FROM cards WHERE id = ?"), (card_id,))
+    if not cur.fetchone():
         conn.close()
         raise HTTPException(404, "card not found")
 
     created = []
     for f in files:
-        ext = os.path.splitext(f.filename)[1]
-        stored_name = f"{uuid.uuid4().hex}{ext}"
-        dest = os.path.join(UPLOAD_DIR, stored_name)
-        with open(dest, "wb") as out:
-            shutil.copyfileobj(f.file, out)
-        size = os.path.getsize(dest)
+        data = await f.read()
+        if len(data) > MAX_FILE_MB * 1024 * 1024:
+            conn.close()
+            raise HTTPException(413, f"ไฟล์ {f.filename} ใหญ่เกิน {MAX_FILE_MB} MB")
         att_id = uuid.uuid4().hex
-        conn.execute(
-            """INSERT INTO attachments (id, card_id, filename, content_type, size, stored_name)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (att_id, card_id, f.filename, f.content_type, size, stored_name),
+        cur.execute(
+            _q(
+                """INSERT INTO attachments (id, card_id, filename, content_type, size, data)
+                   VALUES (?, ?, ?, ?, ?, ?)"""
+            ),
+            (att_id, card_id, f.filename, f.content_type, len(data), _blob(data)),
         )
         created.append(
             {
                 "id": att_id,
                 "name": f.filename,
                 "type": f.content_type,
-                "size": size,
-                "url": f"/uploads/{stored_name}",
+                "size": len(data),
+                "url": f"/files/{att_id}",
             }
         )
-    conn.execute("UPDATE cards SET updated_at = ? WHERE id = ?", (now_iso(), card_id))
+    cur.execute(_q("UPDATE cards SET updated_at = ? WHERE id = ?"), (now_iso(), card_id))
     conn.commit()
     conn.close()
     return created
@@ -259,17 +323,31 @@ def upload_attachments(card_id: int, files: List[UploadFile] = File(...)):
 @app.delete("/api/attachments/{att_id}")
 def delete_attachment(att_id: str):
     conn = get_conn()
-    row = conn.execute("SELECT * FROM attachments WHERE id = ?", (att_id,)).fetchone()
-    if not row:
-        conn.close()
-        raise HTTPException(404, "not found")
-    path = os.path.join(UPLOAD_DIR, row["stored_name"])
-    if os.path.exists(path):
-        os.remove(path)
-    conn.execute("DELETE FROM attachments WHERE id = ?", (att_id,))
+    cur = _cursor(conn)
+    cur.execute(_q("DELETE FROM attachments WHERE id = ?"), (att_id,))
     conn.commit()
     conn.close()
     return JSONResponse(status_code=204, content=None)
+
+
+@app.get("/files/{att_id}")
+def get_file(att_id: str):
+    conn = get_conn()
+    cur = _cursor(conn)
+    cur.execute(
+        _q("SELECT filename, content_type, data FROM attachments WHERE id = ?"),
+        (att_id,),
+    )
+    row = cur.fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(404, "ไม่พบไฟล์")
+    data = bytes(row["data"])
+    return Response(
+        content=data,
+        media_type=row["content_type"] or "application/octet-stream",
+        headers={"Content-Disposition": f'inline; filename="{row["filename"]}"'},
+    )
 
 
 # ---------------- Frontend ----------------

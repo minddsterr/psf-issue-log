@@ -7,5 +7,8 @@ services:
     plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: python server.py
-    # หมายเหตุ: free tier ไม่มี persistent disk — ข้อมูลจะรีเซ็ตเมื่อ deploy ใหม่
-    # ถ้าต้องเก็บข้อมูลถาวร ให้ upgrade เป็น plan ที่มี disk แล้วเพิ่ม DATA_DIR=/data + disk mount
+    envVars:
+      # ใส่ connection string ของ Supabase Postgres ที่หน้า Render → Environment
+      # ถ้าไม่ตั้ง ระบบจะ fallback เป็น SQLite (ข้อมูลจะไม่ถาวรบน Render free)
+      - key: DATABASE_URL
+        sync: false
