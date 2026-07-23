@@ -775,6 +775,7 @@
         await api.deleteAttachment(att.id);
         card.attachments = card.attachments.filter(a => a.id !== att.id);
         renderAttachments(card); renderCover(card); renderAll(false);
+        if (!modalDirty) { saveHint.textContent = "ลบไฟล์แล้ว ✓"; saveHint.className = "save-hint saved"; }
       });
       tile.appendChild(rm);
       grid.appendChild(tile);
@@ -877,6 +878,7 @@
       const newAttachments = await api.uploadAttachments(currentCardId, processed);
       card.attachments = (card.attachments || []).concat(newAttachments);
       renderAttachments(card); renderCover(card); renderAll(false);
+      if (!modalDirty) { saveHint.textContent = "แนบไฟล์แล้ว ✓ (บันทึกอัตโนมัติ)"; saveHint.className = "save-hint saved"; }
     } catch (err) {
       alert("อัปโหลดไม่สำเร็จ (ไฟล์อาจใหญ่เกิน 10 MB)");
     } finally {

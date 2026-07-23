@@ -3,6 +3,7 @@ import sqlite3
 import uuid
 from datetime import datetime
 from typing import Optional, List
+from urllib.parse import quote
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Response
 from fastapi.responses import FileResponse, JSONResponse
@@ -364,10 +365,15 @@ def get_file(att_id: str):
     if not row:
         raise HTTPException(404, "ไม่พบไฟล์")
     data = bytes(row["data"])
+    fname = row["filename"] or "file"
+    # HTTP header เป็น latin-1 เท่านั้น → ชื่อไฟล์ภาษาไทยต้อง encode แบบ RFC 5987
+    ascii_fallback = fname.encode("ascii", "ignore").decode().strip() or "file"
+    ascii_fallback = ascii_fallback.replace('"', "")
+    disposition = f"inline; filename=\"{ascii_fallback}\"; filename*=UTF-8''{quote(fname)}"
     return Response(
         content=data,
         media_type=row["content_type"] or "application/octet-stream",
-        headers={"Content-Disposition": f'inline; filename="{row["filename"]}"'},
+        headers={"Content-Disposition": disposition},
     )
 
 
