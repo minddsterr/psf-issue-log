@@ -137,8 +137,8 @@
 
   /* edit / view mode */
   .modal-top{display:flex;justify-content:space-between;align-items:center;}
-  .btn-edit{border:1px solid var(--line);background:#fff;color:var(--brand-dark);border-radius:9px;padding:8px 14px;font-size:13.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
-  .btn-edit:hover{background:var(--brand-tint);}
+  .btn-edit{border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:9px;padding:7px 13px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:color .15s,border-color .15s;}
+  .btn-edit:hover{color:var(--brand);border-color:var(--brand);background:#fff;}
   .modal.viewing .field select,
   .modal.viewing .field input[type=text],
   .modal.viewing .section textarea,
@@ -205,7 +205,7 @@
     <img class="modal-cover" id="modalCover" style="display:none;">
     <div class="modal-body">
       <div class="modal-top">
-        <button class="btn-edit" id="editBtn">✏️ แก้ไข</button>
+        <button class="btn-edit" id="editBtn"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L18.5 9.5a2.12 2.12 0 0 0-3-3L5 17v3"/><path d="M13.5 6.5l3 3"/></svg>แก้ไข</button>
         <button class="modal-close" id="modalClose">✕</button>
       </div>
       <input type="text" class="modal-title-input" id="fieldTitle" placeholder="ชื่อปัญหา..." readonly>
